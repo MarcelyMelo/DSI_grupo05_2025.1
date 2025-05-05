@@ -1,5 +1,5 @@
 import 'package:dsi_projeto/components/colors/appColors.dart';
-import 'package:dsi_projeto/components/colors/loginScreen/textfield_login.dart';
+import 'package:dsi_projeto/components/textfield_login.dart';
 import 'package:flutter/material.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -64,56 +64,91 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.black,
       body: SafeArea(
-        child: Column(
-          children: [
-            SizedBox(height: 150),
-            Text(
-              'Recuperar senha',
-              style: TextStyle(color: Colors.white, fontSize: 24),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.green,
+                AppColors.white,
+              ],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
             ),
-            SizedBox(height: 10),
-            Text(
-              'Informe seu e-mail para enviar um link de recuperação',
-              style: TextStyle(color: Colors.white, fontSize: 14),
-              textAlign: TextAlign.center,
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: MyTextField(
-                controller: emailController,
-                hintText: "E-mail",
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: AppColors.blue,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: TextButton(
-                  onPressed: enviarEmailRecuperacao,
-                  child: Text("Enviar"),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.white,
+          ),
+          child: Column(
+            children: [
+              SizedBox(height: 150),
+              Padding(
+                padding: EdgeInsets.only(left: 20),
+                child: Align(
+                  alignment: Alignment.topLeft,
+                  child: IconButton(
+                    icon: Icon(Icons.arrow_back),
+                    color: Colors.black,
+                    onPressed: () {
+                      Navigator.popAndPushNamed(context, "/login");
+                    },
                   ),
                 ),
               ),
-            ),
-            SizedBox(height: 20),
-            TextButton(
-              onPressed: () {
-                Navigator.popAndPushNamed(context, "/login");
-              },
-              child: Text(
-                "Voltar para login",
-                style: TextStyle(color: Colors.white),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 25), // Adiciona margem nas laterais
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Esqueceu sua senha?',
+                      style: TextStyle(color: Colors.white, fontSize: 24),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      'Para redefinir sua senha, por favor, insira seu endereço de e-mail.',
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                      softWrap: true, // Garante quebra de linha
+                      textAlign: TextAlign
+                          .left, // Alinhamento esquerdo (mais natural para textos longos)
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: MyTextField(
+                  controller: emailController,
+                  hintText: "E-mail",
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: AppColors.blue,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: TextButton(
+                    onPressed: enviarEmailRecuperacao,
+                    child: Text("Enviar"),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: 20),
+              TextButton(
+                onPressed: () {
+                  Navigator.popAndPushNamed(context, "/login");
+                },
+                child: Text(
+                  "Ir para o login",
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

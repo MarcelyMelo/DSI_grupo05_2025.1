@@ -12,19 +12,18 @@ class MySignInButton extends StatelessWidget {
         onTap();
       },
       child: Container(
-        padding: const EdgeInsets.all(25),
-        margin: const EdgeInsets.symmetric(horizontal: 100),
+        padding: const EdgeInsets.all(10),
+        margin: const EdgeInsets.symmetric(horizontal: 25),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: AppColors.blue,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(100),
         ),
         child: Text(
-          "Entrar",
+          "Acessar",
           style: TextStyle(
             fontSize: 20,
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
+            color: AppColors.blue,
           ),
         ),
       ),
