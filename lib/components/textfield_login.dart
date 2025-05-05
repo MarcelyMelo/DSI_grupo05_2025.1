@@ -31,6 +31,9 @@ class MyTextField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TextFormField(
+      style: TextStyle(
+        color: Colors.white,
+      ),
       controller: controller,
       obscureText: isPassword!,
       keyboardType: keyboardType,
@@ -58,13 +61,16 @@ class MyTextField extends StatelessWidget {
                 ),
               ),
         hintText: hintText,
+        hintStyle: TextStyle(
+          color: Colors.white,
+        ),
         enabledBorder: OutlineInputBorder(
           borderSide: BorderSide(color: Colors.white),
         ),
         focusedBorder: OutlineInputBorder(
           borderSide: BorderSide(color: AppColors.blue),
         ),
-        fillColor: Colors.white,
+        fillColor: Colors.transparent,
         filled: true,
       ),
     );

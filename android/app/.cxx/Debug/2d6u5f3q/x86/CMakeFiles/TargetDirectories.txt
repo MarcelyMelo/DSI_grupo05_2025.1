@@ -1,0 +1,2 @@
+C:/repos/DSI/dsi_projeto/DSI_grupo05_2025.1/android/app/.cxx/Debug/2d6u5f3q/x86/CMakeFiles/edit_cache.dir
+C:/repos/DSI/dsi_projeto/DSI_grupo05_2025.1/android/app/.cxx/Debug/2d6u5f3q/x86/CMakeFiles/rebuild_cache.dir
