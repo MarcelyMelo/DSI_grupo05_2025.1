@@ -87,9 +87,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Título e subtítulo - AGORA ALINHADOS À ESQUERDA
+                  // Botão de voltar alinhado à esquerda
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      icon: Icon(Icons.arrow_back),
+                      color: Colors.black,
+                      onPressed: () {
+                        Navigator.popAndPushNamed(context, "/login");
+                      },
+                    ),
+                  ),
+
+                  // Título e subtítulo alinhados à esquerda
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Column(

@@ -61,7 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     icon: Icon(Icons.arrow_back),
                     color: Colors.black,
                     onPressed: () {
-                      Navigator.pop(context);
+                      Navigator.popAndPushNamed(context, "/login");
                     },
                   ),
                 ),
