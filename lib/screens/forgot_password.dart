@@ -47,14 +47,20 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     if (successMessage != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(successMessage!),
+          content: Text(
+            successMessage!,
+            style: TextStyle(fontSize: 16),
+          ),
           backgroundColor: Colors.green,
         ),
       );
     } else if (errorMessage != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(errorMessage!),
+          content: Text(
+            errorMessage!,
+            style: TextStyle(fontSize: 16),
+          ),
           backgroundColor: Colors.red,
         ),
       );
