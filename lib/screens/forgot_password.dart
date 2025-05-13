@@ -130,10 +130,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   ),
                   child: TextButton(
                     onPressed: enviarEmailRecuperacao,
-                    child: Text("Enviar"),
                     style: TextButton.styleFrom(
                       foregroundColor: Colors.white,
                     ),
+                    child: Text("Enviar"),
                   ),
                 ),
               ),

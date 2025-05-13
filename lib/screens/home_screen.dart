@@ -1,5 +1,6 @@
-import 'package:dsi_projeto/components/colors/appColors.dart';
 import 'package:flutter/material.dart';
+import 'package:dsi_projeto/components/custom_bottom_navbar.dart'; // Importação correta
+import 'package:dsi_projeto/components/colors/appColors.dart'; // Importação das cores
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -8,15 +9,74 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        fontFamily:
-            'Inter', // Use 'Inter' no seu pubspec.yaml ou uma fonte similar
-      ),
-      home: const TaskListPage(),
+      theme: ThemeData(fontFamily: 'Inter'),
+      home: const MainNavigationScreen(),
     );
   }
 }
 
+class MainNavigationScreen extends StatefulWidget {
+  const MainNavigationScreen({super.key});
+
+  @override
+  State<MainNavigationScreen> createState() => _MainNavigationScreenState();
+}
+
+class _MainNavigationScreenState extends State<MainNavigationScreen> {
+  int _selectedIndex = 0;
+
+  static const List<Widget> _pages = <Widget>[
+    TaskListPage(),
+    PlaceholderWidget(Colors.red, "Calendário"),
+    PlaceholderWidget(Colors.green, "Adicionar"),
+    PlaceholderWidget(Colors.blue, "Notificações"),
+    PlaceholderWidget(Colors.orange, "Perfil"),
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: _pages[_selectedIndex],
+      bottomNavigationBar: CustomBottomNavBar( // Agora deve ser reconhecido
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+      ),
+    );
+  }
+}
+
+// Widget para páginas não implementadas (placeholders)
+class PlaceholderWidget extends StatelessWidget {
+  final Color color;
+  final String text;
+
+  const PlaceholderWidget(this.color, this.text, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: color.withOpacity(0.1),
+      child: Center(
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Sua página de lista de tarefas (mantida igual)
 class TaskListPage extends StatelessWidget {
   const TaskListPage({super.key});
 
@@ -41,7 +101,6 @@ class TaskListPage extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Exemplo de 1 item estático (será substituído por lista dinâmica)
             _buildTaskItem(
               task: "Reunião discutir cores do app de...",
               time: "01:16",
@@ -64,7 +123,7 @@ class TaskListPage extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // Adicionar novo item aqui (pode ser um dialog ou nova rota)
+          // Adicionar novo item aqui
         },
         backgroundColor: Colors.black,
         child: const Icon(Icons.add, color: Colors.white),

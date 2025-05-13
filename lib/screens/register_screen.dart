@@ -2,7 +2,6 @@ import 'package:flutter/gestures.dart';
 import 'package:dsi_projeto/components/colors/appColors.dart';
 import 'package:dsi_projeto/components/textfield_register.dart';
 import 'package:flutter/material.dart';
-import '../components/textfield_login.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
