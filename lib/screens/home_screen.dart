@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:dsi_projeto/components/custom_bottom_navbar.dart'; // Importação correta
 import 'package:dsi_projeto/components/colors/appColors.dart'; // Importação das cores
+import 'package:dsi_projeto/screens/pomodoro_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -29,7 +30,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     TaskListPage(),
     PlaceholderWidget(Colors.red, "Calendário"),
     PlaceholderWidget(Colors.green, "Adicionar"),
-    PlaceholderWidget(Colors.blue, "Notificações"),
+    PomodoroScreen(), // Nova tela adicionada
     PlaceholderWidget(Colors.orange, "Perfil"),
   ];
 
