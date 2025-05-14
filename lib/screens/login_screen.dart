@@ -1,4 +1,5 @@
 import 'package:dsi_projeto/components/colors/appColors.dart';
+import 'package:dsi_projeto/components/icons/icon_login.dart';
 import 'package:dsi_projeto/components/signin_button.dart';
 import 'package:dsi_projeto/components/textfield_login.dart';
 import 'package:flutter/material.dart';
@@ -28,7 +29,10 @@ class _LoginScreenState extends State<LoginScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(errorMessage!),
+          content: Text(
+            errorMessage!,
+            style: TextStyle(fontSize: 16),
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -37,65 +41,52 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Scaffold(
-        body: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                AppColors.green,
-                AppColors.blue,
-              ],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-          ),
+    return Scaffold(
+      backgroundColor: AppColors.backgroundLogin,
+      body: SingleChildScrollView(
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 20),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
             children: [
-              SizedBox(height: 100),
-              Padding(
-                padding: EdgeInsets.only(left: 20),
-                child: Align(
-                  alignment: Alignment.topLeft,
-                  child: IconButton(
-                    icon: Icon(Icons.arrow_back),
-                    color: Colors.black,
-                    onPressed: () {
-                      Navigator.popAndPushNamed(context, "/login");
-                    },
-                  ),
-                ),
-              ),
-              Row(
+              SizedBox(height: 10), // Espaço mínimo no topo
+
+              // Logo e texto
+              Column(
                 children: [
-                  SizedBox(width: 25),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Entrar',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 30,
-                          )),
-                      Text(
-                        'Adicione seu e-mail e senha',
-                        style: TextStyle(color: Colors.white, fontSize: 16),
-                      ),
-                    ],
-                  )
+                  FocaIcon(),
+                  SizedBox(height: 8), // Espaço reduzido
+                  Text(
+                    'Organize sua vida e rotina de estudos',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 15), // Espaço reduzido
+                  Text(
+                    'Entrar',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 30,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ],
               ),
+              SizedBox(height: 20), // Espaço reduzido
+
+              // Campos do formulário
               Padding(
-                padding: EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
                 child: Column(
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
-                      child: MyTextField(
-                        controller: emailController,
-                        hintText: "Seu e-mail",
-                      ),
+                    MyTextField(
+                      controller: emailController,
+                      hintText: "Seu e-mail",
                     ),
+                    SizedBox(height: 12), // Espaço reduzido
                     MyTextField(
                       controller: senhaController,
                       isPassword: true,
@@ -104,45 +95,50 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
               ),
+              SizedBox(height: 20), // Espaço reduzido
+
+              // Botão de acesso
               MySignInButton(
                 onTap: fazerLogin,
               ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.popAndPushNamed(context, "/forgotPassword");
-                    },
-                    child: Text(
-                      "Esqueci minha senha",
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ],
+              SizedBox(height: 12), // Espaço reduzido
+
+              // Link "Esqueci minha senha"
+              TextButton(
+                onPressed: () {
+                  Navigator.popAndPushNamed(context, "/forgotPassword");
+                },
+                child: Text(
+                  "Esqueci minha senha",
+                  style: TextStyle(color: Colors.white),
+                ),
               ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              SizedBox(height: 15), // Espaço reduzido
+
+              // Seção de cadastro
+              Column(
                 children: [
                   Text(
-                    'Não é membro?',
+                    'Ainda não tem uma conta?',
                     style: TextStyle(color: Colors.white),
                   ),
-                  SizedBox(width: 4),
+                  SizedBox(height: 4), // Espaço reduzido
                   GestureDetector(
                     onTap: () {
                       Navigator.popAndPushNamed(context, "/register");
                     },
                     child: Text(
-                      'Crie sua conta agora',
+                      'Inscreva-se',
                       style: TextStyle(
                         color: Colors.blue,
                         fontWeight: FontWeight.bold,
+                        fontSize: 20,
                       ),
                     ),
                   )
                 ],
-              )
+              ),
+              SizedBox(height: 10), // Espaço mínimo no final
             ],
           ),
         ),
