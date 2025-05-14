@@ -24,7 +24,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (nome.isEmpty || email.isEmpty || senha.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Preencha todos os campos"),
+          content: Text(
+            "Preencha todos os campos",
+            style: TextStyle(fontSize: 16),
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -34,7 +37,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!email.contains("@") || !email.contains(".")) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("E-mail inválido"),
+          content: Text(
+            "E-mail inválido",
+            style: TextStyle(fontSize: 16),
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -44,7 +50,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (senha.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Senha deve ter pelo menos 6 caracteres"),
+          content: Text(
+            "Senha deve ter pelo menos 6 caracteres",
+            style: TextStyle(fontSize: 16),
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -54,7 +63,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     // Sucesso (mock)
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text("Conta criada com sucesso!"),
+        content: Text(
+          "Conta criada com sucesso!",
+          style: TextStyle(fontSize: 16),
+        ),
         backgroundColor: Colors.green,
       ),
     );
@@ -199,7 +211,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         TextSpan(
                           text: 'Termos de Serviço',
                           style: TextStyle(
-                            color: AppColors.blue,
+                            color: AppColors.black,
                             decoration: TextDecoration.underline,
                           ),
                           recognizer: TapGestureRecognizer()
@@ -214,7 +226,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         TextSpan(
                           text: 'Política de Privacidade',
                           style: TextStyle(
-                            color: AppColors.blue,
+                            color: AppColors.black,
                             decoration: TextDecoration.underline,
                           ),
                           recognizer: TapGestureRecognizer()
