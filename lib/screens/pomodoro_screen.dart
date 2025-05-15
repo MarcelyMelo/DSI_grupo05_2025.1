@@ -4,18 +4,20 @@ import 'dart:async'; // Adicione esta linha
 import 'package:flutter/services.dart';
 import 'package:dsi_projeto/screens/edit_timer_screen.dart';
 import 'package:flutter/material.dart';
-
+import 'package:dsi_projeto/components/time_inputs/time_input_field.dart';
+import 'package:dsi_projeto/components/time_inputs/minute_second_input.dart';
+import 'package:dsi_projeto/components/time_inputs/pomodoro_time_inputs.dart';
 class TimerModel {
-  String name;
-  int duration; // em segundos
+  final String name;
+  int duration;
   bool isRunning;
   Timer? timer;
-  bool isPomodoro;
-  int studyDuration; // Duração do estudo (em segundos)
-  int breakDuration; // Duração do descanso (em segundos)
-  int intervals; // Quantidade de intervalos
-  int completedIntervals; // Intervalos completados
-  bool isStudyPhase; // Se está na fase de estudo
+  final bool isPomodoro;
+  final int studyDuration;
+  final int breakDuration;
+  final int intervals;
+  int completedIntervals;
+  bool isStudyPhase;
 
   TimerModel({
     required this.name,
@@ -23,12 +25,34 @@ class TimerModel {
     this.isRunning = false,
     this.timer,
     this.isPomodoro = false,
-    this.studyDuration = 25 * 60, // 25 minutos padrão
-    this.breakDuration = 5 * 60, // 5 minutos padrão
-    this.intervals = 4, // 4 intervalos padrão
+    this.studyDuration = 25 * 60,
+    this.breakDuration = 5 * 60,
+    this.intervals = 4,
     this.completedIntervals = 0,
     this.isStudyPhase = true,
   });
+
+  void start(void Function() onTick) {
+    timer?.cancel();
+    isRunning = true;
+    timer = Timer.periodic(const Duration(seconds: 1), (_) => onTick());
+  }
+
+  void stop() {
+    timer?.cancel();
+    isRunning = false;
+  }
+
+  void reset() {
+    stop();
+    duration = isPomodoro ? studyDuration : duration;
+    isStudyPhase = true;
+    completedIntervals = 0;
+  }
+
+  void dispose() {
+    timer?.cancel();
+  }
 }
 class PomodoroScreen extends StatefulWidget {
   const PomodoroScreen({super.key});
@@ -227,32 +251,22 @@ String _formatDuration(int totalSeconds) {
   final seconds = (totalSeconds % 60).toString().padLeft(2, '0');
   return '$minutes:$seconds';
 }
+
 void _showAddTimerDialog(BuildContext context) {
   bool isPomodoro = false;
-  int studyMinutes = 25;
-  int studySeconds = 0;
-  int breakMinutes = 5;
-  int breakSeconds = 0;
-  int intervals = 4;
+  final studyMinutesController = TextEditingController(text: '25');
+  final studySecondsController = TextEditingController(text: '0');
+  final breakMinutesController = TextEditingController(text: '5');
+  final breakSecondsController = TextEditingController(text: '0');
+  final intervalsController = TextEditingController(text: '4');
+  final minutesController = TextEditingController(text: '25');
+  final secondsController = TextEditingController(text: '0');
 
   showDialog(
     context: context,
     builder: (BuildContext context) {
       return StatefulBuilder(
         builder: (context, setState) {
-          var textField = TextField(
-                            keyboardType: TextInputType.number,
-                              inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                              LengthLimitingTextInputFormatter(3), // Para limitar a 2 dígitos
-                            ],
-                            decoration: const InputDecoration(
-                              labelText: 'Minutos',
-                            ),
-                            onChanged: (value) {
-                              breakMinutes = int.tryParse(value) ?? 5;
-                            },
-                          );
           return AlertDialog(
             title: const Text('Adicionar Novo Cronômetro'),
             content: SingleChildScrollView(
@@ -263,13 +277,14 @@ void _showAddTimerDialog(BuildContext context) {
                     controller: _timerNameController,
                     decoration: const InputDecoration(
                       labelText: 'Nome do Cronômetro',
+                      border: OutlineInputBorder(),
                     ),
-                      autofocus: true, // Adicione esta linha
+                    autofocus: true,
                   ),
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      const Text('Modo Pomodoro'),
+                      const Text('Modo Pomodoro', style: TextStyle(fontWeight: FontWeight.bold)),
                       const Spacer(),
                       Switch(
                         value: isPomodoro,
@@ -283,114 +298,20 @@ void _showAddTimerDialog(BuildContext context) {
                   ),
                   if (isPomodoro) ...[
                     const SizedBox(height: 16),
-                    const Text('Tempo de Foco:'),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            keyboardType: TextInputType.number,
-                              inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                              LengthLimitingTextInputFormatter(3), // Para limitar a 2 dígitos
-                            ],
-                            decoration: const InputDecoration(
-                              labelText: 'Minutos',
-                            ),
-                            onChanged: (value) {
-                              studyMinutes = int.tryParse(value) ?? 25;
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: TextField(
-                            keyboardType: TextInputType.number,
-                              inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                              LengthLimitingTextInputFormatter(2), // Para limitar a 2 dígitos
-                            ],
-                            decoration: const InputDecoration(
-                              labelText: 'Segundos',
-                            ),
-                            onChanged: (value) {
-                              studySeconds = int.tryParse(value) ?? 0;
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    const Text('Tempo de descanso:'),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: textField,
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: TextField(
-                            keyboardType: TextInputType.number,
-                              inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                              LengthLimitingTextInputFormatter(2), // Para limitar a 2 dígitos
-                            ],
-                            decoration: const InputDecoration(
-                              labelText: 'Segundos',
-                            ),
-                            onChanged: (value) {
-                              breakSeconds = int.tryParse(value) ?? 0;
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      keyboardType: TextInputType.number,
-                        inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                              LengthLimitingTextInputFormatter(2), // Para limitar a 2 dígitos
-                            ],
-                      decoration: const InputDecoration(
-                        labelText: 'Quantidade de intervalos',
-                      ),
-                      onChanged: (value) {
-                        intervals = int.tryParse(value) ?? 4;
-                      },
+                    PomodoroTimeInputs(
+                      studyMinutesController: studyMinutesController,
+                      studySecondsController: studySecondsController,
+                      breakMinutesController: breakMinutesController,
+                      breakSecondsController: breakSecondsController,
+                      intervalsController: intervalsController,
                     ),
                   ] else ...[
                     const SizedBox(height: 16),
-                    const Text('Duração total:'),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _minutesController,
-                            keyboardType: TextInputType.number,
-                              inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                              LengthLimitingTextInputFormatter(3), // Para limitar a 2 dígitos
-                            ],
-                            decoration: const InputDecoration(
-                              labelText: 'Minutos',
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: TextField(
-                            controller: _secondsController,
-                            keyboardType: TextInputType.number,
-                              inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                              LengthLimitingTextInputFormatter(2), // Para limitar a 2 dígitos
-                            ],
-                            decoration: const InputDecoration(
-                              labelText: 'Segundos',
-                            ),
-                          ),
-                        ),
-                      ],
+                    const Text('Duração total:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    MinuteSecondInput(
+                      minutesController: minutesController,
+                      secondsController: secondsController,
                     ),
                   ],
                 ],
@@ -402,44 +323,59 @@ void _showAddTimerDialog(BuildContext context) {
                 child: const Text('Cancelar'),
               ),
               ElevatedButton(
-  onPressed: () {
-    if (_timerNameController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Digite um nome para o cronômetro')));
-      return;
-    }
+                onPressed: () {
+                  // if (_timerNameController.text.isEmpty) {
+                  //   ScaffoldMessenger.of(context).showSnackBar(
+                  //     const SnackBar(content: Text('Digite um nome para o cronômetro')));
+                  //   return;
+                  // }
 
-    if (isPomodoro) {
-      if (!_validateTimeInput(breakMinutes.toString(), breakSeconds.toString())) return;
-      
-      _addTimer(
-        _timerNameController.text,
-        (studyMinutes * 60) + studySeconds,
-        isPomodoro: true,
-        studyDuration: (studyMinutes * 60) + studySeconds,
-        breakDuration: (breakMinutes * 60) + breakSeconds,
-        intervals: intervals,
-      );
-    } else {
-      if (!_validateTimeInput(_minutesController.text, _secondsController.text)) return;
-      
-      _addTimer(
-        _timerNameController.text,
-        (int.parse(_minutesController.text) * 60) + int.parse(_secondsController.text),
-        isPomodoro: false,
-      );
-    }
-    Navigator.pop(context);
-  },
-  child: const Text('Adicionar'),
-),
+                  if (isPomodoro) {
+                    final breakMinutes = int.tryParse(breakMinutesController.text) ?? 5;
+                    final breakSeconds = int.tryParse(breakSecondsController.text) ?? 0;
+                    
+                    if (!_validateTimeInput(breakMinutes.toString(), breakSeconds.toString())) return;
+                    
+                    _addTimer(
+                      _timerNameController.text, // Pode estar vazio, será tratado
+                      (int.parse(studyMinutesController.text) * 60) + int.parse(studySecondsController.text),
+                      isPomodoro: true,
+                      studyDuration: (int.parse(studyMinutesController.text) * 60) + int.parse(studySecondsController.text),
+                      breakDuration: (breakMinutes * 60) + breakSeconds,
+                      intervals: int.tryParse(intervalsController.text) ?? 4,
+                    );
+                  } else {
+                    if (!_validateTimeInput(minutesController.text, secondsController.text)) return;
+                    
+                    _addTimer(
+                      _timerNameController.text, // Pode estar vazio, será tratado
+                      (int.parse(minutesController.text) * 60) + int.parse(secondsController.text),
+                      isPomodoro: false,
+                    );
+                  }
+                  Navigator.pop(context);
+                },
+                child: const Text('Adicionar'),
+              ),
+
             ],
           );
         },
       );
     },
-  );
+  ).then((_) {
+    // Limpar os controladores quando o diálogo for fechado
+    studyMinutesController.dispose();
+    studySecondsController.dispose();
+    breakMinutesController.dispose();
+    breakSecondsController.dispose();
+    intervalsController.dispose();
+    minutesController.dispose();
+    secondsController.dispose();
+  });
 }
+
+
 void _addTimer(
   String name,
   int duration, {
@@ -448,9 +384,23 @@ void _addTimer(
   int breakDuration = 300,
   int intervals = 4,
 }) {
+  // Gerar nome padrão se estiver vazio
+  String finalName = name.trim();
+  if (finalName.isEmpty) {
+    final baseName = isPomodoro ? 'Pomodoro' : 'Temporizador';
+    int counter = 1;
+    
+    // Encontrar o próximo número disponível
+    while (_timers.any((t) => t.name == '$baseName$counter')) {
+      counter++;
+    }
+    
+    finalName = '$baseName$counter';
+  }
+
   setState(() {
     _timers.add(TimerModel(
-      name: name,
+      name: finalName,
       duration: isPomodoro ? studyDuration : duration,
       isPomodoro: isPomodoro,
       studyDuration: studyDuration,
@@ -458,10 +408,12 @@ void _addTimer(
       intervals: intervals,
     ));
   });
+  
   _timerNameController.clear();
   _minutesController.clear();
   _secondsController.clear();
 }
+
 void _resetTimer(int index) {
   setState(() {
     _timers[index].timer?.cancel();
