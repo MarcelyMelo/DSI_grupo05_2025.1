@@ -467,17 +467,21 @@ void _editTimer(int index) async {
         currentBreakMinutes: timer.breakDuration ~/ 60,
         currentBreakSeconds: timer.breakDuration % 60,
         currentIntervals: timer.intervals,
+        // Adicionar estes novos parâmetros para manter o tempo atual
+        currentMinutes: timer.duration ~/ 60,
+        currentSeconds: timer.duration % 60,
       ),
     ),
   );
 
   if (result != null && result is Map) {
     setState(() {
+      // Atualizar tanto a duração atual quanto as configurações do Pomodoro
+      final newDuration = (result['minutes'] * 60) + result['seconds'];
+      
       _timers[index] = TimerModel(
         name: result['name'],
-        duration: timer.isPomodoro 
-            ? (result['studyMinutes'] * 60) + result['studySeconds']
-            : (result['studyMinutes'] * 60) + result['studySeconds'],
+        duration: newDuration,
         isPomodoro: result['isPomodoro'],
         studyDuration: (result['studyMinutes'] * 60) + result['studySeconds'],
         breakDuration: (result['breakMinutes'] * 60) + result['breakSeconds'],
