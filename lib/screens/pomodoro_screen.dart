@@ -1,21 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:dsi_projeto/components/colors/appColors.dart';
 import 'dart:async'; // Adicione esta linha
-import 'package:flutter/services.dart';
 import 'package:dsi_projeto/screens/edit_timer_screen.dart';
-import 'package:flutter/material.dart';
-import 'package:dsi_projeto/components/time_inputs/time_input_field.dart';
 import 'package:dsi_projeto/components/time_inputs/minute_second_input.dart';
 import 'package:dsi_projeto/components/time_inputs/pomodoro_time_inputs.dart';
+
 class TimerModel {
-  final String name;
+  String name;  // Removido final
   int duration;
   bool isRunning;
   Timer? timer;
-  final bool isPomodoro;
-  final int studyDuration;
-  final int breakDuration;
-  final int intervals;
+  bool isPomodoro;
+  int studyDuration;  // Removido final
+  int breakDuration;  // Removido final
+  int intervals;  // Removido final
   int completedIntervals;
   bool isStudyPhase;
 
@@ -32,6 +29,7 @@ class TimerModel {
     this.isStudyPhase = true,
   });
 
+
   void start(void Function() onTick) {
     timer?.cancel();
     isRunning = true;
@@ -43,12 +41,16 @@ class TimerModel {
     isRunning = false;
   }
 
-  void reset() {
-    stop();
-    duration = isPomodoro ? studyDuration : duration;
-    isStudyPhase = true;
-    completedIntervals = 0;
+void reset() {
+  stop();
+  if (isPomodoro) {
+    duration = isStudyPhase ? studyDuration : breakDuration;
+  } else {
+    duration = studyDuration; // Para timers normais, studyDuration armazena o tempo inicial
   }
+  isStudyPhase = true;
+  completedIntervals = 0;
+}
 
   void dispose() {
     timer?.cancel();
@@ -398,17 +400,16 @@ void _addTimer(
     finalName = '$baseName$counter';
   }
 
-  setState(() {
+setState(() {
     _timers.add(TimerModel(
       name: finalName,
       duration: isPomodoro ? studyDuration : duration,
       isPomodoro: isPomodoro,
-      studyDuration: studyDuration,
+      studyDuration: isPomodoro ? studyDuration : duration, // Aqui o importante
       breakDuration: breakDuration,
       intervals: intervals,
     ));
-  });
-  
+  });  
   _timerNameController.clear();
   _minutesController.clear();
   _secondsController.clear();
@@ -421,15 +422,19 @@ void _resetTimer(int index) {
     
     if (_timers[index].isPomodoro) {
       // Resetar para os valores iniciais do Pomodoro
-      _timers[index].duration = _timers[index].studyDuration;
+      _timers[index].duration = _timers[index].isStudyPhase 
+          ? _timers[index].studyDuration 
+          : _timers[index].breakDuration;
       _timers[index].isStudyPhase = true;
       _timers[index].completedIntervals = 0;
     } else {
       // Resetar cronômetro simples para a duração original
+      // Usamos studyDuration que armazena o tempo inicial para timers normais também
       _timers[index].duration = _timers[index].studyDuration;
     }
   });
 }
+
 void _removeTimer(int index) {
   showDialog(
     context: context,
@@ -467,7 +472,6 @@ void _editTimer(int index) async {
         currentBreakMinutes: timer.breakDuration ~/ 60,
         currentBreakSeconds: timer.breakDuration % 60,
         currentIntervals: timer.intervals,
-        // Adicionar estes novos parâmetros para manter o tempo atual
         currentMinutes: timer.duration ~/ 60,
         currentSeconds: timer.duration % 60,
       ),
@@ -476,24 +480,30 @@ void _editTimer(int index) async {
 
   if (result != null && result is Map) {
     setState(() {
-      // Atualizar tanto a duração atual quanto as configurações do Pomodoro
-      final newDuration = (result['minutes'] * 60) + result['seconds'];
+      // Atualiza os valores diretamente no modelo
+      _timers[index].name = result['name'];
+      _timers[index].studyDuration = (result['studyMinutes'] * 60) + result['studySeconds'];
+      _timers[index].breakDuration = (result['breakMinutes'] * 60) + result['breakSeconds'];
+      _timers[index].intervals = result['intervals'];
       
-      _timers[index] = TimerModel(
-        name: result['name'],
-        duration: newDuration,
-        isPomodoro: result['isPomodoro'],
-        studyDuration: (result['studyMinutes'] * 60) + result['studySeconds'],
-        breakDuration: (result['breakMinutes'] * 60) + result['breakSeconds'],
-        intervals: result['intervals'],
-        isRunning: timer.isRunning,
-        timer: timer.timer,
-        completedIntervals: timer.completedIntervals,
-        isStudyPhase: timer.isStudyPhase,
-      );
+      // Atualiza a duração atual baseada no modo
+      if (_timers[index].isPomodoro) {
+        _timers[index].duration = _timers[index].isStudyPhase 
+            ? _timers[index].studyDuration 
+            : _timers[index].breakDuration;
+      } else {
+        _timers[index].duration = (result['minutes'] * 60) + result['seconds'];
+      }
+      
+      // Reinicia o timer se estiver em execução
+      if (_timers[index].isRunning) {
+        _timers[index].stop();
+        _startTimer(index);
+      }
     });
   }
 }
+
 
 void _startTimer(int index) {
   // Parar qualquer timer que já esteja rodando neste Pomodoro
