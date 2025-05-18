@@ -19,7 +19,8 @@ class _MapScreenState extends State<MapScreen> {
   String errorMessage = '';
   List<LatLng> nearbyPlaces = [];
   String selectedPlaceType = 'cafe';
-  double searchRadius = 1000; // Raio inicial de 1km
+  double searchRadius = 1000;
+  bool showFilterOptions = false;
 
   @override
   void initState() {
@@ -66,13 +67,11 @@ class _MapScreenState extends State<MapScreen> {
         errorMessage = '';
       });
 
-      // Definindo os tipos de amenidades para cada categoria
       final amenities = {
         'cafe': ['cafe', 'coffee_shop'],
         'bookstore': ['library', 'bookstore']
       };
 
-      // Construindo a query para a API Overpass
       final overpassQuery = '''
         [out:json];
         (
@@ -85,21 +84,15 @@ class _MapScreenState extends State<MapScreen> {
 
       final url = 'https://overpass-api.de/api/interpreter?data=${Uri.encodeComponent(overpassQuery)}';
       
-      print('Enviando requisição para: $url'); // Debug
-
       final response = await http.get(
         Uri.parse(url),
         headers: {'User-Agent': 'DSIApp/1.0'},
       );
 
-      print('Resposta recebida: ${response.statusCode}'); // Debug
-
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final elements = data['elements'] as List<dynamic>;
         
-        print('Elementos encontrados: ${elements.length}'); // Debug
-
         if (elements.isEmpty) {
           setState(() {
             errorMessage = 'Nenhum local encontrado neste raio';
@@ -109,15 +102,12 @@ class _MapScreenState extends State<MapScreen> {
         }
 
         final places = elements.map((element) {
-          // Para nodes, usamos diretamente lat e lon
           if (element['type'] == 'node') {
             return LatLng(
               element['lat'],
               element['lon'],
             );
-          } 
-          // Para ways e relations, usamos o centro
-          else if (element['center'] != null) {
+          } else if (element['center'] != null) {
             return LatLng(
               element['center']['lat'],
               element['center']['lon'],
@@ -141,165 +131,226 @@ class _MapScreenState extends State<MapScreen> {
         errorMessage = 'Erro ao buscar locais: $e';
         isLoading = false;
       });
-      print('Erro completo: $e'); // Debug
     }
+  }
+
+  void _toggleFilterOptions() {
+    setState(() {
+      showFilterOptions = !showFilterOptions;
+    });
+  }
+
+  void _selectPlaceType(String type) {
+    setState(() {
+      selectedPlaceType = type;
+      showFilterOptions = false;
+    });
+    _findNearbyPlaces(
+      currentPosition!.latitude, 
+      currentPosition!.longitude
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF0C1C22),
       appBar: AppBar(
         backgroundColor: const Color(0xFF0C1C22),
         elevation: 0,
         toolbarHeight: 0,
       ),
-      body: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            alignment: Alignment.center,
-            color: const Color(0xFF0C1C22),
-            child: const Text(
-              'Encontre locais de estudo perto de você',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+      body: Container(
+        color: const Color(0xFF0C1C22),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              alignment: Alignment.center,
+              color: const Color(0xFF0C1C22),
+              child: const Text(
+                'Encontre locais de estudo perto de você',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
             ),
-          ),
-          Container(
-            color: const Color(0xFF0C1C22),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            child: Column(
-              children: [
-                Text(
-                  'Raio de busca: ${(searchRadius/1000).toStringAsFixed(1)} km',
-                  style: const TextStyle(color: Colors.white),
-                ),
-                Slider(
-                  value: searchRadius,
-                  min: 500,
-                  max: 5000,
-                  divisions: 9,
-                  label: '${(searchRadius/1000).toStringAsFixed(1)} km',
-                  activeColor: Colors.white,
-                  inactiveColor: Colors.grey,
-                  onChanged: (value) {
-                    setState(() {
-                      searchRadius = value;
-                    });
-                  },
-                  onChangeEnd: (value) {
-                    if (currentPosition != null) {
-                      _findNearbyPlaces(
-                        currentPosition!.latitude, 
-                        currentPosition!.longitude
-                      );
-                    }
-                  },
-                ),
-              ],
+            Container(
+              color: const Color(0xFF0C1C22),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Column(
+                children: [
+                  Text(
+                    'Raio de busca: ${(searchRadius/1000).toStringAsFixed(1)} km',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  Slider(
+                    value: searchRadius,
+                    min: 500,
+                    max: 5000,
+                    divisions: 9,
+                    label: '${(searchRadius/1000).toStringAsFixed(1)} km',
+                    activeColor: Colors.white,
+                    inactiveColor: Colors.grey[600],
+                    onChanged: (value) {
+                      setState(() {
+                        searchRadius = value;
+                      });
+                    },
+                    onChangeEnd: (value) {
+                      if (currentPosition != null) {
+                        _findNearbyPlaces(
+                          currentPosition!.latitude, 
+                          currentPosition!.longitude
+                        );
+                      }
+                    },
+                  ),
+                ],
+              ),
             ),
-          ),
-          Expanded(
-            child: isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : errorMessage.isNotEmpty
-                    ? Center(child: Text(errorMessage))
-                    : FlutterMap(
-                        options: MapOptions(
-                          initialCenter: currentPosition!,
-                          initialZoom: 15.0,
+            Expanded(
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Color(0xFF0C1C22),
+                ),
+                child: isLoading
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
-                        children: [
-                          TileLayer(
-                            urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                            subdomains: const ['a', 'b', 'c'],
-                          ),
-                          MarkerLayer(
-                            markers: [
-                              Marker(
-                                width: 40.0,
-                                height: 40.0,
-                                point: currentPosition!,
-                                child: const Icon(
-                                  Icons.person_pin_circle,
-                                  color: Colors.blue,
-                                  size: 40,
+                      )
+                    : errorMessage.isNotEmpty
+                        ? Center(
+                            child: Text(
+                              errorMessage,
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          )
+                        : ClipRRect(
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                            child: FlutterMap(
+                              options: MapOptions(
+                                initialCenter: currentPosition!,
+                                initialZoom: 15.0,
+                              ),
+                              children: [
+                                TileLayer(
+                                  urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                  subdomains: const ['a', 'b', 'c'],
                                 ),
-                              ),
-                            ],
+                                MarkerLayer(
+                                  markers: [
+                                    Marker(
+                                      width: 40.0,
+                                      height: 40.0,
+                                      point: currentPosition!,
+                                      child: const Icon(
+                                        Icons.person_pin_circle,
+                                        color: Colors.blue,
+                                        size: 40,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                MarkerLayer(
+                                  markers: nearbyPlaces.map((place) => Marker(
+                                    width: 30.0,
+                                    height: 30.0,
+                                    point: place,
+                                    child: Icon(
+                                      selectedPlaceType == 'cafe'
+                                        ? Icons.local_cafe
+                                        : Icons.menu_book,
+                                      color: selectedPlaceType == 'cafe'
+                                        ? Colors.brown
+                                        : Colors.indigo,
+                                      size: 30,
+                                    ),
+                                  )).toList(),
+                                ),
+                              ],
+                            ),
                           ),
-                          MarkerLayer(
-                            markers: nearbyPlaces.map((place) => Marker(
-                              width: 30.0,
-                              height: 30.0,
-                              point: place,
-                              child: Icon(
-                                selectedPlaceType == 'cafe'
-                                  ? Icons.local_cafe
-                                  : Icons.menu_book,
-                                color: selectedPlaceType == 'cafe'
-                                  ? Colors.brown
-                                  : Colors.indigo,
-                                size: 30,
-                              ),
-                            )).toList(),
-                          ),
-                        ],
-                      ),
-          ),
-          Container(
-            color: const Color(0xFF0C1C22),
-            padding: const EdgeInsets.all(10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: selectedPlaceType == 'cafe' 
-                      ? Colors.brown 
-                      : const Color(0xFF0C1C22),
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      selectedPlaceType = 'cafe';
-                    });
-                    _findNearbyPlaces(
-                      currentPosition!.latitude, 
-                      currentPosition!.longitude
-                    );
-                  },
-                  child: const Text('Cafeterias', style: TextStyle(color: Colors.white)),
-                ),
-                const SizedBox(width: 20),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: selectedPlaceType == 'bookstore' 
-                      ? Colors.indigo 
-                      : const Color(0xFF0C1C22),
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      selectedPlaceType = 'bookstore';
-                    });
-                    _findNearbyPlaces(
-                      currentPosition!.latitude, 
-                      currentPosition!.longitude
-                    );
-                  },
-                  child: const Text('Livrarias', style: TextStyle(color: Colors.white)),
-                ),
-              ],
+              ),
             ),
-          ),
-        ],
+            Container(
+              color: const Color(0xFF0C1C22),
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                children: [
+                  ElevatedButton(
+                    onPressed: _toggleFilterOptions,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0C1C22),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        side: const BorderSide(color: Color(0x4DFFFFFF)),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.filter_alt, color: Colors.white),
+                        const SizedBox(width: 8),
+                        Text(
+                          selectedPlaceType == 'cafe' ? 'Cafeterias' : 'Livrarias',
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(
+                          showFilterOptions ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+                          color: Colors.white,
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (showFilterOptions) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _buildFilterOption('cafe', 'Cafeterias', Colors.brown),
+                        const SizedBox(width: 20),
+                        _buildFilterOption('bookstore', 'Livrarias', Colors.indigo),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFF0C1C22),
         onPressed: _getCurrentLocation,
+        backgroundColor: const Color(0xFF0C1C22),
         child: const Icon(Icons.refresh, color: Colors.white),
+      ),
+    );
+  }
+
+  Widget _buildFilterOption(String type, String label, Color color) {
+    return Container(
+      decoration: BoxDecoration(
+        color: selectedPlaceType == type ? color : const Color(0xFF0C1C22),
+        borderRadius: BorderRadius.circular(8),
+        border: const Border(
+          top: BorderSide(color: Color(0x4DFFFFFF)),
+          bottom: BorderSide(color: Color(0x4DFFFFFF)),
+          left: BorderSide(color: Color(0x4DFFFFFF)),
+          right: BorderSide(color: Color(0x4DFFFFFF)),
+        ),
+      ),
+      child: TextButton(
+        onPressed: () => _selectPlaceType(type),
+        child: Text(
+          label,
+          style: const TextStyle(color: Colors.white),
+        ),
       ),
     );
   }
