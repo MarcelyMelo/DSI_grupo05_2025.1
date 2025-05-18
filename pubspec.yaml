@@ -9,6 +9,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  latlong2: ^0.9.1
+  flutter_map: ^8.1.1
+  geolocator: ^14.0.0
+  permission_handler: ^12.0.0
+
+
 
 dev_dependencies:
   flutter_test:
