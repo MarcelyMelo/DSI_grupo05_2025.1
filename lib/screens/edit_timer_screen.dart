@@ -71,60 +71,54 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
 
   bool _validateInputs() {
     // Validação do nome
-    if (_nameController.text.isEmpty) {
+    if (_nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Digite um nome para o cronômetro')));
       return false;
     }
 
-    // Validação dos tempos
-    final mins = _isPomodoro 
-        ? int.tryParse(_studyMinutesController.text) ?? 0
-        : int.tryParse(_minutesController.text) ?? 0;
-    final secs = _isPomodoro 
-        ? int.tryParse(_studySecondsController.text) ?? 0
-        : int.tryParse(_secondsController.text) ?? 0;
-    
-    if (mins < 0 || secs < 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Valores não podem ser negativos')));
-      return false;
-    }
-    
-    if (secs >= 60) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Segundos devem ser menores que 60')));
-      return false;
-    }
-    
-    if (mins == 0 && secs == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Duração não pode ser zero')));
-      return false;
+    // Validação genérica para todos os campos de tempo
+    bool validateTime(int minutes, int seconds, String fieldName) {
+      if (minutes < 0 || seconds < 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Valores de $fieldName não podem ser negativos')));
+        return false;
+      }
+      
+      if (seconds >= 60) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Segundos de $fieldName devem ser menores que 60')));
+        return false;
+      }
+      
+      if (minutes == 0 && seconds == 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Duração de $fieldName não pode ser zero')));
+        return false;
+      }
+      return true;
     }
 
+    // Validação dos tempos
     if (_isPomodoro) {
+      final studyMins = int.tryParse(_studyMinutesController.text) ?? 0;
+      final studySecs = int.tryParse(_studySecondsController.text) ?? 0;
       final breakMins = int.tryParse(_breakMinutesController.text) ?? 0;
       final breakSecs = int.tryParse(_breakSecondsController.text) ?? 0;
       final intervals = int.tryParse(_intervalsController.text) ?? 0;
 
-      if (breakMins < 0 || breakSecs < 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Valores de descanso não podem ser negativos')));
-        return false;
-      }
-      
-      if (breakSecs >= 60) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Segundos de descanso devem ser menores que 60')));
-        return false;
-      }
+      if (!validateTime(studyMins, studySecs, 'foco')) return false;
+      if (!validateTime(breakMins, breakSecs, 'descanso')) return false;
       
       if (intervals <= 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Deve haver pelo menos 1 intervalo')));
         return false;
       }
+    } else {
+      final mins = int.tryParse(_minutesController.text) ?? 0;
+      final secs = int.tryParse(_secondsController.text) ?? 0;
+      if (!validateTime(mins, secs, 'temporizador')) return false;
     }
 
     return true;
@@ -203,8 +197,8 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
   void _saveChanges() {
     if (!_validateInputs()) return;
 
-    final result = {
-      'name': _nameController.text,
+    Navigator.pop(context, {
+      'name': _nameController.text.trim(),
       'isPomodoro': _isPomodoro,
       'studyMinutes': int.parse(_studyMinutesController.text),
       'studySeconds': int.parse(_studySecondsController.text),
@@ -213,8 +207,6 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
       'intervals': int.parse(_intervalsController.text),
       'minutes': int.parse(_minutesController.text),
       'seconds': int.parse(_secondsController.text),
-    };
-
-    Navigator.pop(context, result);
+    });
   }
 }
