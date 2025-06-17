@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'widgets/weekly_view.dart';
 import 'widgets/monthly_view.dart';
+import 'schedule_controller.dart';
+import 'widgets/task_form.dart';
 
 class SchedulePage extends StatefulWidget {
   const SchedulePage({Key? key}) : super(key: key);
@@ -11,6 +13,7 @@ class SchedulePage extends StatefulWidget {
 
 class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final ScheduleController _controller = ScheduleController();
 
   @override
   void initState() {
@@ -18,13 +21,13 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
     _tabController = TabController(length: 2, vsync: this);
   }
 
- @override
+  @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
   }
-  
-@override
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -39,10 +42,24 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
       ),
       body: TabBarView(
         controller: _tabController,
-        children: const [
-          WeeklyView(),
+        children: [
+          WeeklyView(allTasks: _controller.tasks),
           MonthlyView(),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          showDialog(
+            context: context,
+            builder: (context) => TaskForm(
+              controller: _controller,
+              onTaskAdded: () {
+                setState(() {}); // atualiza a UI para refletir a nova tarefa
+              },
+            ),
+          );
+        },
+        child: const Icon(Icons.add),
       ),
     );
   }
