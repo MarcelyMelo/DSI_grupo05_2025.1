@@ -20,6 +20,13 @@ class ScheduleController {
     }
   }
 
+  void completeTask(String id) {
+    final index = _tasks.indexWhere((task) => task.id == id);
+    if (index != -1) {
+      _tasks[index].isCompleted = true;
+    }
+  }
+
   List<Task> tasksForDate(DateTime date) {
     return _tasks.where((task) =>
       task.dueDate.year == date.year &&
