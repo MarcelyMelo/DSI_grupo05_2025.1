@@ -31,6 +31,6 @@ class MainApp extends StatelessWidget {
           '/createCollection': (context) => CreateCollectionScreen(collectionService: CollectionService()),
           '/map': (context) => const MapScreen(),
         },
-        home: CreateCollectionScreen(collectionService: CollectionService()));
+        home: HomeScreen());
   }
 }
