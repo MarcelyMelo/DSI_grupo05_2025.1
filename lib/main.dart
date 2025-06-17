@@ -3,6 +3,7 @@ import 'package:dsi_projeto/screens/flashcard_screen.dart';
 import 'package:dsi_projeto/screens/forgot_password.dart';
 import 'package:dsi_projeto/screens/home_screen.dart';
 import 'package:dsi_projeto/screens/login_screen.dart';
+import 'package:dsi_projeto/screens/profile_screen.dart';
 import 'package:dsi_projeto/screens/register_screen.dart';
 import 'package:dsi_projeto/services/collection_service.dart';
 import 'package:flutter/material.dart';
@@ -28,7 +29,9 @@ class MainApp extends StatelessWidget {
           '/forgotPassword': (context) => const ForgotPasswordScreen(),
           '/pomodoro': (context) => const PomodoroScreen(),
           '/flashcards': (context) => const FlashcardScreen(),
-          '/createCollection': (context) => CreateCollectionScreen(collectionService: CollectionService()),
+          '/createCollection': (context) =>
+              CreateCollectionScreen(collectionService: CollectionService()),
+          '/profile': (context) => const ProfileScreen(),
           '/map': (context) => const MapScreen(),
         },
         home: HomeScreen());
