@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
 import '../models/task_model.dart';
+import '../schedule_controller.dart';
 
 class WeeklyView extends StatefulWidget {
-  final List<Task> allTasks; // Recebe todas as tarefas da semana (ou do controller)
+  final List<Task> allTasks;
+  final ScheduleController controller;
 
-  const WeeklyView({Key? key, required this.allTasks}) : super(key: key);
+  const WeeklyView({Key? key, required this.allTasks, required this.controller}) : super(key: key);
 
   @override
   State<WeeklyView> createState() => _WeeklyViewState();
 }
 
 class _WeeklyViewState extends State<WeeklyView> {
-  int selectedDayIndex = DateTime.now().weekday - 1; // 0 = seg, 6 = dom
+  int selectedDayIndex = DateTime.now().weekday - 1;
   final List<String> weekDays = const ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
-  // Retorna tarefas do dia selecionado
   List<Task> get tasksForSelectedDay {
     DateTime today = DateTime.now();
-    // Ajustar a data para o dia da semana selecionado (mesmo semana atual)
     DateTime selectedDate = today.subtract(Duration(days: today.weekday - 1 - selectedDayIndex));
 
     return widget.allTasks.where((task) {
@@ -31,7 +31,7 @@ class _WeeklyViewState extends State<WeeklyView> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Seletor de dias da semana no topo
+        // Seletor de dias da semana
         SizedBox(
           height: 50,
           child: ListView.builder(
@@ -63,7 +63,7 @@ class _WeeklyViewState extends State<WeeklyView> {
           ),
         ),
 
-        // Lista de tarefas do dia selecionado
+        // Lista de tarefas com botão de completar
         Expanded(
           flex: 2,
           child: tasksForSelectedDay.isEmpty
@@ -73,12 +73,29 @@ class _WeeklyViewState extends State<WeeklyView> {
                   itemBuilder: (context, index) {
                     final task = tasksForSelectedDay[index];
                     return ListTile(
-                      title: Text(task.title),
+                      leading: IconButton(
+                        icon: Icon(
+                          task.isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
+                          color: task.isCompleted ? Colors.green : Colors.grey,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            widget.controller.completeTask(task.id);
+                          });
+                        },
+                      ),
+                      title: Text(
+                        task.title,
+                        style: TextStyle(
+                          decoration: task.isCompleted ? TextDecoration.lineThrough : null,
+                          color: task.isCompleted ? Colors.grey : null,
+                        ),
+                      ),
                       subtitle: Text(
                         'Entrega: ${task.dueDate.day}/${task.dueDate.month}/${task.dueDate.year} '
                         '${task.dueDate.hour}:${task.dueDate.minute.toString().padLeft(2, '0')}',
                       ),
-                      leading: CircleAvatar(backgroundColor: task.tagColor),
+                      trailing: CircleAvatar(backgroundColor: task.tagColor),
                     );
                   },
                 ),
@@ -86,14 +103,13 @@ class _WeeklyViewState extends State<WeeklyView> {
 
         const SizedBox(height: 8),
 
-        // Grade horária do dia selecionado com indicação das tarefas
+        // Grade de horários
         Expanded(
           flex: 3,
           child: ListView.builder(
-            itemCount: 12, // blocos de horário (ex: 8h às 20h)
+            itemCount: 12,
             itemBuilder: (context, hourIndex) {
               int hour = 8 + hourIndex;
-              // Tarefas que começam nesta hora no dia selecionado
               final tasksThisHour = tasksForSelectedDay.where((task) => task.dueDate.hour == hour).toList();
 
               return Row(

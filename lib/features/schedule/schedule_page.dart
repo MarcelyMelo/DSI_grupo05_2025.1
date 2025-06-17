@@ -43,7 +43,8 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
       body: TabBarView(
         controller: _tabController,
         children: [
-          WeeklyView(allTasks: _controller.tasks),
+          WeeklyView(allTasks: _controller.tasks
+          ,controller: _controller),
           MonthlyView(),
         ],
       ),
