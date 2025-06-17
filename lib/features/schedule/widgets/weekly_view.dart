@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import '../models/task_model.dart';
 import '../schedule_controller.dart';
+import '../pages/edit_task_page.dart';
 
 class WeeklyView extends StatefulWidget {
-  final List<Task> allTasks;
   final ScheduleController controller;
 
-  const WeeklyView({Key? key, required this.allTasks, required this.controller}) : super(key: key);
+  const WeeklyView({Key? key, required this.controller}) : super(key: key);
 
   @override
   State<WeeklyView> createState() => _WeeklyViewState();
@@ -16,16 +16,16 @@ class _WeeklyViewState extends State<WeeklyView> {
   int selectedDayIndex = DateTime.now().weekday - 1;
   final List<String> weekDays = const ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
-  List<Task> get tasksForSelectedDay {
-    DateTime today = DateTime.now();
-    DateTime selectedDate = today.subtract(Duration(days: today.weekday - 1 - selectedDayIndex));
+ List<Task> get tasksForSelectedDay {
+  DateTime today = DateTime.now();
+  DateTime selectedDate = today.subtract(Duration(days: today.weekday - 1 - selectedDayIndex));
 
-    return widget.allTasks.where((task) {
-      return task.dueDate.year == selectedDate.year &&
-          task.dueDate.month == selectedDate.month &&
-          task.dueDate.day == selectedDate.day;
-    }).toList();
-  }
+  return widget.controller.tasks.where((task) {
+    return task.dueDate.year == selectedDate.year &&
+        task.dueDate.month == selectedDate.month &&
+        task.dueDate.day == selectedDate.day;
+  }).toList();
+}
 
   @override
   Widget build(BuildContext context) {
@@ -63,7 +63,7 @@ class _WeeklyViewState extends State<WeeklyView> {
           ),
         ),
 
-        // Lista de tarefas com botão de completar
+        // Lista de tarefas com botão de completar e navegação para edição
         Expanded(
           flex: 2,
           child: tasksForSelectedDay.isEmpty
@@ -72,30 +72,44 @@ class _WeeklyViewState extends State<WeeklyView> {
                   itemCount: tasksForSelectedDay.length,
                   itemBuilder: (context, index) {
                     final task = tasksForSelectedDay[index];
-                    return ListTile(
-                      leading: IconButton(
-                        icon: Icon(
-                          task.isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
-                          color: task.isCompleted ? Colors.green : Colors.grey,
+                    return InkWell(
+                      onTap: () async {
+                        final updated = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => EditTaskPage(task: task, controller: widget.controller),
+                          ),
+                        );
+
+                        if (updated == true) {
+                          setState(() {});
+                        }
+                      },
+                      child: ListTile(
+                        leading: IconButton(
+                          icon: Icon(
+                            task.isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
+                            color: task.isCompleted ? Colors.green : Colors.grey,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              widget.controller.completeTask(task.id);
+                            });
+                          },
                         ),
-                        onPressed: () {
-                          setState(() {
-                            widget.controller.completeTask(task.id);
-                          });
-                        },
-                      ),
-                      title: Text(
-                        task.title,
-                        style: TextStyle(
-                          decoration: task.isCompleted ? TextDecoration.lineThrough : null,
-                          color: task.isCompleted ? Colors.grey : null,
+                        title: Text(
+                          task.title,
+                          style: TextStyle(
+                            decoration: task.isCompleted ? TextDecoration.lineThrough : null,
+                            color: task.isCompleted ? Colors.grey : null,
+                          ),
                         ),
+                        subtitle: Text(
+                          'Entrega: ${task.dueDate.day}/${task.dueDate.month}/${task.dueDate.year} '
+                          '${task.dueDate.hour}:${task.dueDate.minute.toString().padLeft(2, '0')}',
+                        ),
+                        trailing: CircleAvatar(backgroundColor: task.tagColor),
                       ),
-                      subtitle: Text(
-                        'Entrega: ${task.dueDate.day}/${task.dueDate.month}/${task.dueDate.year} '
-                        '${task.dueDate.hour}:${task.dueDate.minute.toString().padLeft(2, '0')}',
-                      ),
-                      trailing: CircleAvatar(backgroundColor: task.tagColor),
                     );
                   },
                 ),
