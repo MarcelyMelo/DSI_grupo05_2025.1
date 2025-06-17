@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'widgets/weekly_view.dart';
 import 'widgets/monthly_view.dart';
 import 'schedule_controller.dart';
-import 'widgets/task_form.dart';
+import 'package:dsi_projeto/features/schedule/pages/edit_task_page.dart';
 
 class SchedulePage extends StatefulWidget {
   const SchedulePage({Key? key}) : super(key: key);
@@ -13,7 +13,7 @@ class SchedulePage extends StatefulWidget {
 
 class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final ScheduleController _controller = ScheduleController();
+  final ScheduleController _controller = ScheduleController.instance;  // Usando singleton
 
   @override
   void initState() {
@@ -48,16 +48,16 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          showDialog(
-            context: context,
-            builder: (context) => TaskForm(
-              controller: _controller,
-              onTaskAdded: () {
-                setState(() {}); // atualiza a UI para refletir a nova tarefa
-              },
+        onPressed: () async {
+          final created = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => EditTaskPage(controller: _controller),
             ),
           );
+          if (created == true) {
+            setState(() {});
+          }
         },
         child: const Icon(Icons.add),
       ),
