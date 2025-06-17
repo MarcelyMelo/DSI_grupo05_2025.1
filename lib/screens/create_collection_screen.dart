@@ -36,7 +36,7 @@ class _CreateCollectionScreenState extends State<CreateCollectionScreen> {
       
       // MUDANÇA AQUI: Apenas volta para a tela anterior
       // O setState() na FlashcardScreen vai atualizar automaticamente
-      Navigator.pop(context);
+      Navigator.pop(context, "/flashcards");
       
       // Mostra mensagem de sucesso
       ScaffoldMessenger.of(context).showSnackBar(
