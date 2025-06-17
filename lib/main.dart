@@ -1,3 +1,5 @@
+import 'package:dsi_projeto/screens/create_collection_screen.dart';
+import 'package:dsi_projeto/screens/flashcard_screen.dart';
 import 'package:dsi_projeto/screens/forgot_password.dart';
 import 'package:dsi_projeto/screens/home_screen.dart';
 import 'package:dsi_projeto/screens/login_screen.dart';
@@ -24,8 +26,10 @@ class MainApp extends StatelessWidget {
           '/login': (context) => const LoginScreen(),
           '/forgotPassword': (context) => const ForgotPasswordScreen(),
           '/pomodoro': (context) => const PomodoroScreen(), // 🔹 nova rota
-          '/map':(context) => const MapScreen(),
+          '/flashcards': (context) => const FlashcardScreen(),
+          '/createCollection': (context) => const CreateCollectionScreen(),
+          '/map': (context) => const MapScreen(),
         },
-        home: const LoginScreen());
+        home: const HomeScreen());
   }
 }
