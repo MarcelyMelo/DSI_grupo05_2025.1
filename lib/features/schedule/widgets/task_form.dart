@@ -28,7 +28,9 @@ class _TaskFormState extends State<TaskForm> {
   String? _selectedTag;
   Color? _selectedTagColor;
 
+  // Incluí a opção 'Nenhuma' com cor transparente
   final Map<String, Color> tags = {
+    'Nenhuma': Colors.transparent,
     'Estudo': Colors.blue,
     'Trabalho': Colors.red,
     'Pessoal': Colors.green,
@@ -38,18 +40,21 @@ class _TaskFormState extends State<TaskForm> {
   void initState() {
     super.initState();
 
-    // Se estiver editando, preencher com dados da tarefa
     if (widget.taskToEdit != null) {
       final task = widget.taskToEdit!;
       _titleController = TextEditingController(text: task.title);
       _descriptionController = TextEditingController(text: task.description ?? '');
       _selectedDate = task.dueDate;
       _selectedTime = TimeOfDay(hour: task.dueDate.hour, minute: task.dueDate.minute);
-      _selectedTag = task.tag;
-      _selectedTagColor = task.tagColor;
+
+      // Se a tag da tarefa não estiver no mapa, atribui 'Nenhuma'
+      _selectedTag = tags.containsKey(task.tag) ? task.tag : 'Nenhuma';
+      _selectedTagColor = tags[_selectedTag!];
     } else {
       _titleController = TextEditingController();
       _descriptionController = TextEditingController();
+      _selectedTag = 'Nenhuma';
+      _selectedTagColor = tags['Nenhuma'];
     }
   }
 
@@ -98,12 +103,6 @@ class _TaskFormState extends State<TaskForm> {
       );
       return;
     }
-    if (_selectedTag == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor, selecione uma tag')),
-      );
-      return;
-    }
 
     final dueDate = DateTime(
       _selectedDate!.year,
@@ -113,25 +112,27 @@ class _TaskFormState extends State<TaskForm> {
       _selectedTime!.minute,
     );
 
+    // Se selecionou 'Nenhuma', considera tag como null e cor transparente
+    final tag = (_selectedTag == 'Nenhuma') ? '' : _selectedTag!;
+    final tagColor = (_selectedTag == 'Nenhuma') ? Colors.transparent : _selectedTagColor!;
+
     if (widget.taskToEdit != null) {
-      // Edição
       final updatedTask = widget.taskToEdit!.copyWith(
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
         dueDate: dueDate,
-        tag: _selectedTag!,
-        tagColor: _selectedTagColor!,
+        tag: tag,
+        tagColor: tagColor,
       );
       widget.controller.updateTask(updatedTask);
     } else {
-      // Criação
       final newTask = Task(
         id: DateTime.now().toIso8601String(),
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
         dueDate: dueDate,
-        tag: _selectedTag!,
-        tagColor: _selectedTagColor!,
+        tag: tag,
+        tagColor: tagColor,
       );
       widget.controller.addTask(newTask);
     }
@@ -194,7 +195,7 @@ class _TaskFormState extends State<TaskForm> {
                 ],
               ),
               DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: 'Tag *'),
+                decoration: const InputDecoration(labelText: 'Tag (opcional)'),
                 value: _selectedTag,
                 items: tags.entries
                     .map((e) => DropdownMenuItem(
@@ -218,12 +219,7 @@ class _TaskFormState extends State<TaskForm> {
                     _selectedTagColor = val == null ? null : tags[val];
                   });
                 },
-                validator: (value) {
-                  if (value == null) {
-                    return 'Selecione uma tag';
-                  }
-                  return null;
-                },
+                validator: null, // Não obrigatório, pode ser null
               ),
             ],
           ),
