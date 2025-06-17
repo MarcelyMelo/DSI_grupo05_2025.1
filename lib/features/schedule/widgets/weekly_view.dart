@@ -16,16 +16,16 @@ class _WeeklyViewState extends State<WeeklyView> {
   int selectedDayIndex = DateTime.now().weekday - 1;
   final List<String> weekDays = const ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
- List<Task> get tasksForSelectedDay {
-  DateTime today = DateTime.now();
-  DateTime selectedDate = today.subtract(Duration(days: today.weekday - 1 - selectedDayIndex));
+  List<Task> get tasksForSelectedDay {
+    DateTime today = DateTime.now();
+    DateTime selectedDate = today.subtract(Duration(days: today.weekday - 1 - selectedDayIndex));
 
-  return widget.controller.tasks.where((task) {
-    return task.dueDate.year == selectedDate.year &&
-        task.dueDate.month == selectedDate.month &&
-        task.dueDate.day == selectedDate.day;
-  }).toList();
-}
+    return widget.controller.tasks.where((task) {
+      return task.dueDate.year == selectedDate.year &&
+          task.dueDate.month == selectedDate.month &&
+          task.dueDate.day == selectedDate.day;
+    }).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -104,11 +104,37 @@ class _WeeklyViewState extends State<WeeklyView> {
                             color: task.isCompleted ? Colors.grey : null,
                           ),
                         ),
-                        subtitle: Text(
-                          'Entrega: ${task.dueDate.day}/${task.dueDate.month}/${task.dueDate.year} '
-                          '${task.dueDate.hour}:${task.dueDate.minute.toString().padLeft(2, '0')}',
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Entrega: ${task.dueDate.day}/${task.dueDate.month}/${task.dueDate.year} '
+                              '${task.dueDate.hour}:${task.dueDate.minute.toString().padLeft(2, '0')}',
+                            ),
+                            if (task.tag != null && task.tag!.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 12,
+                                      height: 12,
+                                      decoration: BoxDecoration(
+                                        color: task.tagColor ?? Colors.grey,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(task.tag!),
+                                  ],
+                                ),
+                              ),
+                          ],
                         ),
-                        trailing: CircleAvatar(backgroundColor: task.tagColor),
+                        trailing: CircleAvatar(
+                          backgroundColor: task.tagColor ?? Colors.grey,
+                          radius: 10,
+                        ),
                       ),
                     );
                   },
