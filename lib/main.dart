@@ -4,6 +4,7 @@ import 'package:dsi_projeto/screens/forgot_password.dart';
 import 'package:dsi_projeto/screens/home_screen.dart';
 import 'package:dsi_projeto/screens/login_screen.dart';
 import 'package:dsi_projeto/screens/register_screen.dart';
+import 'package:dsi_projeto/services/collection_service.dart';
 import 'package:flutter/material.dart';
 import 'package:dsi_projeto/screens/pomodoro_screen.dart'; // 🔹 adicione essa linha
 import 'package:dsi_projeto/screens/map_screen.dart'; // 🔹 adicione essa linha
@@ -25,11 +26,11 @@ class MainApp extends StatelessWidget {
           '/register': (context) => const RegisterScreen(),
           '/login': (context) => const LoginScreen(),
           '/forgotPassword': (context) => const ForgotPasswordScreen(),
-          '/pomodoro': (context) => const PomodoroScreen(), // 🔹 nova rota
+          '/pomodoro': (context) => const PomodoroScreen(),
           '/flashcards': (context) => const FlashcardScreen(),
-          '/createCollection': (context) => const CreateCollectionScreen(),
+          '/createCollection': (context) => CreateCollectionScreen(collectionService: CollectionService()),
           '/map': (context) => const MapScreen(),
         },
-        home: const HomeScreen());
+        home: CreateCollectionScreen(collectionService: CollectionService()));
   }
 }
