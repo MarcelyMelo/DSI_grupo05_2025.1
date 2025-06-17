@@ -1,3 +1,4 @@
+import 'package:dsi_projeto/screens/flashcard_screen.dart';
 import 'package:dsi_projeto/screens/map_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:dsi_projeto/components/custom_bottom_navbar.dart'; // Importação correta
@@ -33,7 +34,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     PlaceholderWidget(Colors.red, "Calendário"),
     MapScreen(),
     PomodoroScreen(), // Nova tela adicionada
-    PlaceholderWidget(Colors.orange, "Perfil"),
+    FlashcardScreen(),
   ];
 
   void _onItemTapped(int index) {
@@ -46,7 +47,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _pages[_selectedIndex],
-      bottomNavigationBar: CustomBottomNavBar( // Agora deve ser reconhecido
+      bottomNavigationBar: CustomBottomNavBar(
+        // Agora deve ser reconhecido
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
       ),
