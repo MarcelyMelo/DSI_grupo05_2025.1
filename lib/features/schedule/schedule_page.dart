@@ -44,7 +44,7 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
         controller: _tabController,
         children: [
           WeeklyView(controller: _controller),
-          MonthlyView(),
+          MonthlyView(controller: _controller),
         ],
       ),
       floatingActionButton: FloatingActionButton(
