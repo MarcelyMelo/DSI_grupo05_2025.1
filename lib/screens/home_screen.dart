@@ -1,21 +1,20 @@
-import 'package:dsi_projeto/screens/map_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:dsi_projeto/components/custom_bottom_navbar.dart'; // Importação correta
-import 'package:dsi_projeto/components/colors/appColors.dart'; // Importação das cores
-import 'package:dsi_projeto/screens/pomodoro_screen.dart';
+import 'package:dsi_projeto/components/custom_bottom_navbar.dart';
+import 'package:dsi_projeto/components/colors/appColors.dart';
+import 'package:dsi_projeto/features/schedule/schedule_controller.dart';
+import 'package:dsi_projeto/features/schedule/models/task_model.dart';
+import 'package:dsi_projeto/features/schedule/pages/edit_task_page.dart';
+import 'package:dsi_projeto/features/schedule/widgets/monthly_view.dart';   
+import 'package:dsi_projeto/features/schedule/widgets/weekly_view.dart';  
 import 'package:dsi_projeto/screens/map_screen.dart';
-import 'package:dsi_projeto/features/schedule/schedule_page.dart';
+import 'package:dsi_projeto/screens/pomodoro_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(fontFamily: 'Inter'),
-      home: const MainNavigationScreen(),
-    );
+    return const MainNavigationScreen();
   }
 }
 
@@ -29,12 +28,16 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
 
-  static const List<Widget> _pages = <Widget>[
-    TaskListPage(),
-    SchedulePage(),
+  // Instância singleton do controller
+  static final ScheduleController _controller = ScheduleController.instance;
+
+  // Passa o controller para as páginas que precisam
+  late final List<Widget> _pages = <Widget>[
+    TaskListPage(controller: _controller),
+    SchedulePage(controller: _controller),
     MapScreen(),
-    PomodoroScreen(), // Nova tela adicionada
-    PlaceholderWidget(Colors.orange, "Perfil"),
+    PomodoroScreen(),
+    const PlaceholderWidget(Colors.orange, "Perfil"),
   ];
 
   void _onItemTapped(int index) {
@@ -47,7 +50,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _pages[_selectedIndex],
-      bottomNavigationBar: CustomBottomNavBar( // Agora deve ser reconhecido
+      bottomNavigationBar: CustomBottomNavBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
       ),
@@ -55,7 +58,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 }
 
-// Widget para páginas não implementadas (placeholders)
 class PlaceholderWidget extends StatelessWidget {
   final Color color;
   final String text;
@@ -80,9 +82,22 @@ class PlaceholderWidget extends StatelessWidget {
   }
 }
 
-// Sua página de lista de tarefas (mantida igual)
-class TaskListPage extends StatelessWidget {
-  const TaskListPage({super.key});
+// TaskListPage ajustado para receber controller
+class TaskListPage extends StatefulWidget {
+  final ScheduleController controller;
+
+  const TaskListPage({super.key, required this.controller});
+
+  @override
+  State<TaskListPage> createState() => _TaskListPageState();
+}
+
+class _TaskListPageState extends State<TaskListPage> {
+  ScheduleController get _controller => widget.controller;
+
+  List<Task> get todayTasks {
+    return _controller.tasksForDate(DateTime.now());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -103,31 +118,54 @@ class TaskListPage extends StatelessWidget {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            _buildTaskItem(
-              task: "Reunião discutir cores do app de...",
-              time: "01:16",
-              tag: "#08",
-            ),
-            const SizedBox(height: 16),
-            _buildTaskItem(
-              task: "Ler o capítulo de requisitos de C1...",
-              time: "06:38",
-              tag: "#53",
-            ),
-            const SizedBox(height: 16),
-            _buildTaskItem(
-              task: "Enviar o artigo pra Gabriel",
-              time: "02:35",
-              tag: "#93 49",
-            ),
-          ],
-        ),
+        child: todayTasks.isEmpty
+            ? const Center(
+                child: Text(
+                  'Nenhuma tarefa para hoje.',
+                  style: TextStyle(color: Colors.white70),
+                ),
+              )
+            : ListView.builder(
+                itemCount: todayTasks.length,
+                itemBuilder: (context, index) {
+                  final task = todayTasks[index];
+                  return GestureDetector(
+                    onTap: () async {
+                      final updated = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => EditTaskPage(
+                            task: task,
+                            controller: _controller,
+                          ),
+                        ),
+                      );
+
+                      if (updated == true) {
+                        setState(() {});
+                      }
+                    },
+                    child: _buildTaskItem(
+                      task: task.title,
+                      time:
+                          '${task.dueDate.hour}:${task.dueDate.minute.toString().padLeft(2, '0')}',
+                      tag: task.tag,
+                    ),
+                  );
+                },
+              ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Adicionar novo item aqui
+        onPressed: () async {
+          final created = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => EditTaskPage(controller: _controller),
+            ),
+          );
+          if (created == true) {
+            setState(() {}); // Atualiza a lista de tarefas
+          }
         },
         backgroundColor: Colors.black,
         child: const Icon(Icons.add, color: Colors.white),
@@ -142,6 +180,7 @@ class TaskListPage extends StatelessWidget {
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.grey[100],
         borderRadius: BorderRadius.circular(12),
@@ -187,6 +226,68 @@ class TaskListPage extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// SchedulePage ajustado para receber controller
+class SchedulePage extends StatefulWidget {
+  final ScheduleController controller;
+
+  const SchedulePage({super.key, required this.controller});
+
+  @override
+  State<SchedulePage> createState() => _SchedulePageState();
+}
+
+class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  ScheduleController get _controller => widget.controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Agenda'),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Semanal'),
+            Tab(text: 'Mensal'),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          WeeklyView(controller: _controller),
+          MonthlyView(controller: _controller),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          showDialog(
+            context: context,
+            builder: (context) => EditTaskPage(
+              controller: _controller,
+            ),
+          ).then((_) => setState(() {}));
+        },
+        child: const Icon(Icons.add),
       ),
     );
   }
