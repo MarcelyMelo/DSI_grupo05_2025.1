@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:dsi_projeto/components/custom_bottom_navbar.dart'; // Importação correta
 import 'package:dsi_projeto/components/colors/appColors.dart'; // Importação das cores
 import 'package:dsi_projeto/screens/pomodoro_screen.dart';
+import 'package:dsi_projeto/features/schedule/schedule_page.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -31,7 +32,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   static const List<Widget> _pages = <Widget>[
     TaskListPage(),
-    PlaceholderWidget(Colors.red, "Calendário"),
+    SchedulePage(),
     MapScreen(),
     PomodoroScreen(),
     FlashcardScreen(),
