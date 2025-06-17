@@ -1,5 +1,6 @@
 import 'package:dsi_projeto/screens/flashcard_screen.dart';
 import 'package:dsi_projeto/screens/map_screen.dart';
+import 'package:dsi_projeto/screens/profile_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:dsi_projeto/components/custom_bottom_navbar.dart'; // Importação correta
 import 'package:dsi_projeto/components/colors/appColors.dart'; // Importação das cores
@@ -26,14 +27,15 @@ class MainNavigationScreen extends StatefulWidget {
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
-  int _selectedIndex = 0;
+  int _selectedIndex = 5;
 
   static const List<Widget> _pages = <Widget>[
     TaskListPage(),
     PlaceholderWidget(Colors.red, "Calendário"),
     MapScreen(),
-    PomodoroScreen(), // Nova tela adicionada
+    PomodoroScreen(),
     FlashcardScreen(),
+    ProfileScreen(),
   ];
 
   void _onItemTapped(int index) {

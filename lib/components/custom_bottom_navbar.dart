@@ -35,6 +35,10 @@ class CustomBottomNavBar extends StatelessWidget {
           icon: Icon(Icons.book_outlined),
           label: 'Flashcards',
         ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.person_outline),
+          label: 'Perfil',
+        ),
       ],
       currentIndex: currentIndex,
       selectedItemColor: AppColors.blue,
