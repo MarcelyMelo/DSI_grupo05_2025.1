@@ -5,10 +5,10 @@ class FocaIcon extends StatelessWidget {
   final Color? color;
 
   const FocaIcon({
-    Key? key,
+    super.key,
     this.size = 300.0,
     this.color,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
