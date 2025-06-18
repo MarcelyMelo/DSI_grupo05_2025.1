@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:dsi_projeto/components/custom_bottom_navbar.dart'; // Importação correta
 import 'package:dsi_projeto/components/colors/appColors.dart'; // Importação das cores
 import 'package:dsi_projeto/screens/pomodoro_screen.dart';
-import 'package:dsi_projeto/features/schedule/schedule_page.dart';
 import 'package:dsi_projeto/features/schedule/schedule_controller.dart';
 import 'package:dsi_projeto/features/schedule/models/task_model.dart';
 import 'package:dsi_projeto/features/schedule/pages/edit_task_page.dart';
