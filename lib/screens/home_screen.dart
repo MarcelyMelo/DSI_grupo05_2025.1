@@ -1,4 +1,3 @@
-<<<<<<< main
 import 'package:dsi_projeto/screens/flashcard_screen.dart';
 import 'package:dsi_projeto/screens/map_screen.dart';
 import 'package:dsi_projeto/screens/profile_screen.dart';
@@ -7,18 +6,11 @@ import 'package:dsi_projeto/components/custom_bottom_navbar.dart'; // Importaç�
 import 'package:dsi_projeto/components/colors/appColors.dart'; // Importação das cores
 import 'package:dsi_projeto/screens/pomodoro_screen.dart';
 import 'package:dsi_projeto/features/schedule/schedule_page.dart';
-=======
-import 'package:flutter/material.dart';
-import 'package:dsi_projeto/components/custom_bottom_navbar.dart';
-import 'package:dsi_projeto/components/colors/appColors.dart';
 import 'package:dsi_projeto/features/schedule/schedule_controller.dart';
 import 'package:dsi_projeto/features/schedule/models/task_model.dart';
 import 'package:dsi_projeto/features/schedule/pages/edit_task_page.dart';
 import 'package:dsi_projeto/features/schedule/widgets/monthly_view.dart';   
 import 'package:dsi_projeto/features/schedule/widgets/weekly_view.dart';  
-import 'package:dsi_projeto/screens/map_screen.dart';
-import 'package:dsi_projeto/screens/pomodoro_screen.dart';
->>>>>>> main
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -48,12 +40,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     SchedulePage(controller: _controller),
     MapScreen(),
     PomodoroScreen(),
-<<<<<<< main
     FlashcardScreen(),
     ProfileScreen(),
-=======
-    const PlaceholderWidget(Colors.orange, "Perfil"),
->>>>>>> main
   ];
 
   void _onItemTapped(int index) {
@@ -67,10 +55,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     return Scaffold(
       body: _pages[_selectedIndex],
       bottomNavigationBar: CustomBottomNavBar(
-<<<<<<< main
         // Agora deve ser reconhecido
-=======
->>>>>>> main
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
       ),
@@ -250,8 +235,6 @@ class _TaskListPageState extends State<TaskListPage> {
     );
   }
 }
-<<<<<<< main
-=======
 
 // SchedulePage ajustado para receber controller
 class SchedulePage extends StatefulWidget {
@@ -314,4 +297,3 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
     );
   }
 }
->>>>>>> main
