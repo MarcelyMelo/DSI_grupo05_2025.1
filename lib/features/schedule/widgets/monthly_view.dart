@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import '../models/task_model.dart';
 import '../schedule_controller.dart';
 import '../pages/edit_task_page.dart';
 

@@ -6,7 +6,7 @@ class EditTaskPage extends StatefulWidget {
   final Task? task;
   final ScheduleController controller;
 
-  const EditTaskPage({Key? key, this.task, required this.controller}) : super(key: key);
+  const EditTaskPage({super.key, this.task, required this.controller});
 
   @override
   State<EditTaskPage> createState() => _EditTaskPageState();

@@ -8,11 +8,11 @@ class TaskForm extends StatefulWidget {
   final Task? taskToEdit;  // Nova tarefa opcional para edição
 
   const TaskForm({
-    Key? key,
+    super.key,
     required this.controller,
     required this.onTaskAdded,
     this.taskToEdit,
-  }) : super(key: key);
+  });
 
   @override
   State<TaskForm> createState() => _TaskFormState();

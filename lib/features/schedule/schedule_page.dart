@@ -5,7 +5,7 @@ import 'schedule_controller.dart';
 import 'package:dsi_projeto/features/schedule/pages/edit_task_page.dart';
 
 class SchedulePage extends StatefulWidget {
-  const SchedulePage({Key? key}) : super(key: key);
+  const SchedulePage({super.key});
 
   @override
   State<SchedulePage> createState() => _SchedulePageState();
