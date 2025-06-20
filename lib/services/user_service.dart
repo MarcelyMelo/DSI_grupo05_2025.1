@@ -1,10 +1,28 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_core/firebase_core.dart';
 import '../models/user.dart';
 
 class UserService {
   static const String _userKey = 'current_user';
   static const String _isLoggedInKey = 'is_logged_in';
+
+  Future<UserModel?> getUserById(String uid) async {
+  try {
+    DocumentSnapshot doc = await Firebase.instance
+        .collection('usuarios')
+        .doc(uid)
+        .get();
+    
+    if (doc.exists) {
+      return UserModel.fromMap(doc.data() as Map<String, dynamic>);
+    }
+    return null;
+  } catch (e) {
+    print('Erro ao buscar usuário: $e');
+    return null;
+  }
+}
 
   // Get current logged user
   Future<UserModel?> getCurrentUser() async {
@@ -76,8 +94,8 @@ class UserService {
 
       final updatedUser = currentUser.copyWith(
         studyTimeInMinutes: additionalStudyMinutes != null
-            ? currentUser.studyTimeInMinutes + additionalStudyMinutes
-            : currentUser.studyTimeInMinutes,
+            ? currentUser.studyTimeMinutes + additionalStudyMinutes
+            : currentUser.studyTimeMinutes,
         completedActivities:
             completedActivities ?? currentUser.completedActivities,
         lastLoginAt: DateTime.now(),
@@ -134,8 +152,8 @@ class UserService {
         'studyTime': user.getFormattedStudyTime(),
         'completedActivities': user.completedActivities,
         'completionRate': user.completionRate,
-        'totalActivities': user.totalActivities,
-        'studyTimeInMinutes': user.studyTimeInMinutes,
+        'completionRate': user.completionRate,
+        'studyTimeInMinutes': user.studyTimeMinutes,
       };
     } catch (e) {
       throw Exception('Erro ao obter estatísticas: $e');
@@ -148,9 +166,9 @@ class UserService {
       id: 'mock_user_123',
       name: 'João Silva',
       email: 'joao.silva@email.com',
-      studyTimeInMinutes: 4223, // 70h23min
+      studyTimeMinutes: 4223, // 70h23min
       completedActivities: 55,
-      totalActivities: 275, // This gives us 20% completion rate
+      completionRate: 275, // This gives us 20% completion rate
       createdAt: DateTime.now().subtract(const Duration(days: 30)),
       lastLoginAt: DateTime.now(),
     );
@@ -193,9 +211,9 @@ class UserService {
         id: 'user_${DateTime.now().millisecondsSinceEpoch}',
         name: name,
         email: email,
-        studyTimeInMinutes: 0,
+        studyTimeMinutes: 0,
         completedActivities: 0,
-        totalActivities: 0,
+        completionRate: 0,
         createdAt: DateTime.now(),
         lastLoginAt: DateTime.now(),
       );

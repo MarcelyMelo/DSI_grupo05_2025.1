@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/gestures.dart';
 import 'package:dsi_projeto/components/colors/appColors.dart';
 import 'package:dsi_projeto/components/textfield_register.dart';
@@ -16,7 +17,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController senhaController = TextEditingController();
 
-  void registrarConta() {
+  Future<void> registrarConta() async {
+    try {
+      final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: senhaController.text,
+      );
+      await credential.user?.updateDisplayName(nomeController.text.trim());
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'weak-password') {
+          print('The password provided is too weak.');
+        } else if (e.code == 'email-already-in-use') {
+          print('The account already exists for that email.');
+        }
+      } catch (e) {
+        print(e);
+      }
+  
     final nome = nomeController.text.trim();
     final email = emailController.text.trim();
     final senha = senhaController.text;
