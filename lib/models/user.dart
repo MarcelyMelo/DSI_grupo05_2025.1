@@ -3,9 +3,9 @@ class UserModel {
   final String name;
   final String email;
   final String? profileImageUrl;
-  final int studyTimeInMinutes; // Total study time in minutes
+  final int studyTimeMinutes; // Total study time in minutes
   final int completedActivities;
-  final int totalActivities;
+  final int completionRate;
   final DateTime createdAt;
   final DateTime lastLoginAt;
 
@@ -14,23 +14,17 @@ class UserModel {
     required this.name,
     required this.email,
     this.profileImageUrl,
-    required this.studyTimeInMinutes,
+    required this.studyTimeMinutes,
     required this.completedActivities,
-    required this.totalActivities,
+    required this.completionRate,
     required this.createdAt,
     required this.lastLoginAt,
   });
 
-  // Calculate completion rate percentage
-  int get completionRate {
-    if (totalActivities == 0) return 0;
-    return ((completedActivities / totalActivities) * 100).round();
-  }
-
   // Format study time as "70h23min"
   String getFormattedStudyTime() {
-    final hours = studyTimeInMinutes ~/ 60;
-    final minutes = studyTimeInMinutes % 60;
+    int hours = studyTimeMinutes ~/ 60;321,0
+    int minutes = studyTimeMinutes % 60;
     return '${hours}h${minutes.toString().padLeft(2, '0')}min';
   }
 
@@ -41,9 +35,9 @@ class UserModel {
       name: json['name'] ?? '',
       email: json['email'] ?? '',
       profileImageUrl: json['profileImageUrl'],
-      studyTimeInMinutes: json['studyTimeInMinutes'] ?? 0,
+      studyTimeMinutes: json['studyTimeInMinutes'] ?? 0,
       completedActivities: json['completedActivities'] ?? 0,
-      totalActivities: json['totalActivities'] ?? 0,
+      completionRate: json['completionRate'] ?? 0,
       createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
       lastLoginAt: DateTime.parse(json['lastLoginAt'] ?? DateTime.now().toIso8601String()),
     );

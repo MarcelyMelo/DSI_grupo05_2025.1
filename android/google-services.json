@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "918969432297",
+    "project_id": "dsigrupo-05-2025-1",
+    "storage_bucket": "dsigrupo-05-2025-1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:918969432297:android:01f6a677974b296d5ad878",
+        "android_client_info": {
+          "package_name": "com.android.application"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCTevyczD36JZQMeQF74iVVLo7CkWWep04"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

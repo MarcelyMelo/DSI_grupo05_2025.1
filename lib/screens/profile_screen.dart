@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../models/user.dart';
 import '../services/user_service.dart';
@@ -13,6 +14,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final UserService _userService = UserService();
   UserModel? _user;
+  User? _firebaseUser;
   bool _isLoading = true;
 
   @override
@@ -23,17 +25,98 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadUserData() async {
     try {
-      final user = await _userService.getCurrentUser();
       setState(() {
-        _user = user;
+        _isLoading = true;
+      });
+
+      // Pegar o usuário atual do Firebase Auth
+      _firebaseUser = FirebaseAuth.instance.currentUser;
+      
+      if (_firebaseUser != null) {
+        print('UID do usuário: ${_firebaseUser!.uid}');
+        print('Email: ${_firebaseUser!.email}');
+        print('Nome (displayName): ${_firebaseUser!.displayName}');
+        
+        // Carregar dados completos do usuário do Firestore
+        _user = await _userService.getUserById(_firebaseUser!.uid);
+        
+        // Se não encontrou no Firestore, criar um usuário básico com dados do Auth
+        if (_user == null && _firebaseUser != null) {
+          _user = UserModel(
+            id: _firebaseUser!.uid,
+            name: _firebaseUser!.displayName ?? 'Usuário',
+            email: _firebaseUser!.email ?? '',
+            // Valores padrão para campos que podem não existir
+            studyTimeMinutes: 0,
+            completedActivities: 0,
+            completionRate: 0,
+          );
+        }
+        
+        // Ouvir mudanças no estado de autenticação
+        FirebaseAuth.instance.authStateChanges().listen((User? user) {
+          if (user != null) {
+            print('Estado de autenticação mudou: ${user.uid}');
+            // Se o usuário mudou, recarregar dados
+            if (_firebaseUser?.uid != user.uid) {
+              _loadUserData();
+            }
+          } else {
+            // Usuário deslogou, redirecionar para login
+            print('Usuário deslogado');
+            // Navigator.of(context).pushReplacementNamed('/login');
+          }
+        });
+      }
+
+      setState(() {
         _isLoading = false;
       });
     } catch (e) {
+      print('Erro ao carregar dados do usuário: $e');
       setState(() {
         _isLoading = false;
       });
-      // Handle error
+      // Mostrar erro para o usuário
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao carregar perfil: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
+  }
+
+  // Método para pegar informações específicas do provedor
+  Map<String, String> _getProviderInfo() {
+    if (_firebaseUser == null) return {};
+    
+    Map<String, String> providerInfo = {};
+    
+    for (final providerProfile in _firebaseUser!.providerData) {
+      // ID do provedor (google.com, apple.com, password, etc.)
+      final provider = providerProfile.providerId;
+      
+      // UID específico do provedor
+      final uid = providerProfile.uid;
+      
+      // Nome, email e foto do perfil
+      final name = providerProfile.displayName;
+      final emailAddress = providerProfile.email;
+      final profilePhoto = providerProfile.photoURL;
+      
+      providerInfo[provider] = 'Nome: $name, Email: $emailAddress';
+      
+      print('Provedor: $provider');
+      print('UID do provedor: $uid');
+      print('Nome: $name');
+      print('Email: $emailAddress');
+      print('Foto: $profilePhoto');
+    }
+    
+    return providerInfo;
   }
 
   @override
@@ -52,7 +135,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         child: SafeArea(
           child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? const Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
               : _buildProfileContent(),
         ),
       ),
@@ -60,6 +147,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildProfileContent() {
+    // Se não há usuário logado
+    if (_firebaseUser == null) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.person_off,
+              size: 64,
+              color: Colors.white,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Nenhum usuário logado',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Column(
       children: [
         // Header with edit button
@@ -117,15 +228,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Container(
                   width: 120,
                   height: 120,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF2C3E50),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2C3E50),
                     shape: BoxShape.circle,
+                    image: _firebaseUser?.photoURL != null
+                        ? DecorationImage(
+                            image: NetworkImage(_firebaseUser!.photoURL!),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
                   ),
-                  child: const Icon(
-                    Icons.person,
-                    size: 60,
-                    color: Colors.white,
-                  ),
+                  child: _firebaseUser?.photoURL == null
+                      ? const Icon(
+                          Icons.person,
+                          size: 60,
+                          color: Colors.white,
+                        )
+                      : null,
                 ),
 
                 const SizedBox(height: 24),
@@ -142,13 +261,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                 const SizedBox(height: 8),
 
-                // User name
+                // User name - prioriza dados do Firestore, depois Firebase Auth
                 Text(
-                  _user?.name ?? '<nome>',
+                  _user?.name ?? _firebaseUser?.displayName ?? 'Usuário',
                   style: const TextStyle(
                     fontSize: 18,
                     color: Color(0xFF7F8C8D),
                     fontWeight: FontWeight.w500,
+                  ),
+                ),
+
+                // Email do usuário
+                const SizedBox(height: 4),
+                Text(
+                  _firebaseUser?.email ?? 'Email não disponível',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF95A5A6),
                   ),
                 ),
 
@@ -187,7 +316,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              _user?.getFormattedStudyTime() ?? '70h23min',
+                              _user?.getFormattedStudyTime() ?? '0h00min',
                               style: const TextStyle(
                                 fontSize: 28,
                                 fontWeight: FontWeight.bold,
@@ -232,7 +361,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    '${_user?.completedActivities ?? 55}',
+                                    '${_user?.completedActivities ?? 0}',
                                     style: const TextStyle(
                                       fontSize: 24,
                                       fontWeight: FontWeight.bold,
@@ -275,7 +404,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    '${_user?.completionRate ?? 20}%',
+                                    '${_user?.completionRate ?? 0}%',
                                     style: const TextStyle(
                                       fontSize: 24,
                                       fontWeight: FontWeight.bold,
