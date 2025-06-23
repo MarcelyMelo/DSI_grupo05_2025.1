@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user.dart';
 
 class UserService {
@@ -8,21 +8,21 @@ class UserService {
   static const String _isLoggedInKey = 'is_logged_in';
 
   Future<UserModel?> getUserById(String uid) async {
-  try {
-    DocumentSnapshot doc = await Firebase.instance
-        .collection('usuarios')
-        .doc(uid)
-        .get();
-    
-    if (doc.exists) {
-      return UserModel.fromMap(doc.data() as Map<String, dynamic>);
+    try {
+      DocumentSnapshot doc = await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(uid)
+          .get();
+      
+      if (doc.exists) {
+        return UserModel.fromMap(doc.data() as Map<String, dynamic>);
+      }
+      return null;
+    } catch (e) {
+      print('Erro ao buscar usuário: $e');
+      return null;
     }
-    return null;
-  } catch (e) {
-    print('Erro ao buscar usuário: $e');
-    return null;
   }
-}
 
   // Get current logged user
   Future<UserModel?> getCurrentUser() async {
@@ -151,7 +151,6 @@ class UserService {
       return {
         'studyTime': user.getFormattedStudyTime(),
         'completedActivities': user.completedActivities,
-        'completionRate': user.completionRate,
         'completionRate': user.completionRate,
         'studyTimeInMinutes': user.studyTimeMinutes,
       };
