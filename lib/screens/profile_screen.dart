@@ -46,6 +46,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             id: _firebaseUser!.uid,
             name: _firebaseUser!.displayName ?? 'Usuário',
             email: _firebaseUser!.email ?? '',
+            createdAt: DateTime.now(),
+            lastLoginAt: DateTime.now(),
             // Valores padrão para campos que podem não existir
             studyTimeMinutes: 0,
             completedActivities: 0,

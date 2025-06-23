@@ -23,7 +23,7 @@ class UserModel {
 
   // Format study time as "70h23min"
   String getFormattedStudyTime() {
-    int hours = studyTimeMinutes ~/ 60;321,0
+    int hours = studyTimeMinutes ~/ 60;
     int minutes = studyTimeMinutes % 60;
     return '${hours}h${minutes.toString().padLeft(2, '0')}min';
   }
@@ -50,9 +50,9 @@ class UserModel {
       'name': name,
       'email': email,
       'profileImageUrl': profileImageUrl,
-      'studyTimeInMinutes': studyTimeInMinutes,
+      'studyTimeInMinutes': studyTimeMinutes,
       'completedActivities': completedActivities,
-      'totalActivities': totalActivities,
+      'completionRate': completionRate,
       'createdAt': createdAt.toIso8601String(),
       'lastLoginAt': lastLoginAt.toIso8601String(),
     };
@@ -75,9 +75,9 @@ class UserModel {
       name: name ?? this.name,
       email: email ?? this.email,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
-      studyTimeInMinutes: studyTimeInMinutes ?? this.studyTimeInMinutes,
+      studyTimeMinutes: studyTimeInMinutes ?? this.studyTimeMinutes,
       completedActivities: completedActivities ?? this.completedActivities,
-      totalActivities: totalActivities ?? this.totalActivities,
+      completionRate: totalActivities ?? this.completionRate,
       createdAt: createdAt ?? this.createdAt,
       lastLoginAt: lastLoginAt ?? this.lastLoginAt,
     );
