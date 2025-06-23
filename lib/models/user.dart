@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class UserModel {
   final String id;
   final String name;
@@ -43,6 +45,59 @@ class UserModel {
     );
   }
 
+  // Convert from Map (para dados do Firestore)
+  factory UserModel.fromMap(Map<String, dynamic> map) {
+    return UserModel(
+      id: map['id'] ?? '',
+      name: map['name'] ?? '',
+      email: map['email'] ?? '',
+      profileImageUrl: map['profileImageUrl'],
+      studyTimeMinutes: map['studyTimeInMinutes'] ?? 0,
+      completedActivities: map['completedActivities'] ?? 0,
+      completionRate: map['completionRate'] ?? 0,
+      createdAt: _parseDateTime(map['createdAt']),
+      lastLoginAt: _parseDateTime(map['lastLoginAt']),
+    );
+  }
+
+  // Helper method to parse DateTime from various formats
+  static DateTime _parseDateTime(dynamic dateValue) {
+    if (dateValue == null) {
+      return DateTime.now();
+    }
+    
+    // If it's already a DateTime
+    if (dateValue is DateTime) {
+      return dateValue;
+    }
+    
+    // If it's a Firestore Timestamp
+    if (dateValue is Timestamp) {
+      return dateValue.toDate();
+    }
+    
+    // If it's a string, try to parse it
+    if (dateValue is String) {
+      try {
+        return DateTime.parse(dateValue);
+      } catch (e) {
+        return DateTime.now();
+      }
+    }
+    
+    // If it's an int (milliseconds since epoch)
+    if (dateValue is int) {
+      try {
+        return DateTime.fromMillisecondsSinceEpoch(dateValue);
+      } catch (e) {
+        return DateTime.now();
+      }
+    }
+    
+    // Default fallback
+    return DateTime.now();
+  }
+
   // Convert to JSON
   Map<String, dynamic> toJson() {
     return {
@@ -55,6 +110,21 @@ class UserModel {
       'completionRate': completionRate,
       'createdAt': createdAt.toIso8601String(),
       'lastLoginAt': lastLoginAt.toIso8601String(),
+    };
+  }
+
+  // Convert to Map (para salvar no Firestore)
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'email': email,
+      'profileImageUrl': profileImageUrl,
+      'studyTimeInMinutes': studyTimeMinutes,
+      'completedActivities': completedActivities,
+      'completionRate': completionRate,
+      'createdAt': createdAt,
+      'lastLoginAt': lastLoginAt,
     };
   }
 
