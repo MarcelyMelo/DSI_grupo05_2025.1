@@ -1,21 +1,30 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user.dart';
 
 class UserService {
   static const String _userKey = 'current_user';
   static const String _isLoggedInKey = 'is_logged_in';
+  
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
 
   Future<UserModel?> getUserById(String uid) async {
     try {
-      DocumentSnapshot doc = await FirebaseFirestore.instance
-          .collection('usuarios')
+      DocumentSnapshot doc = await _firestore
+          .collection('users') // Corrigido: deve ser 'users' para coincidir com as regras
           .doc(uid)
           .get();
       
       if (doc.exists) {
-        return UserModel.fromMap(doc.data() as Map<String, dynamic>);
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        // Adiciona o ID se não estiver presente nos dados
+        data['id'] = uid;
+        return UserModel.fromMap(data);
       }
       return null;
     } catch (e) {
@@ -24,9 +33,171 @@ class UserService {
     }
   }
 
-  // Get current logged user
+  // Create or update user in Firebase
+  Future<void> createOrUpdateUserInFirebase(UserModel user) async {
+    try {
+      await _firestore
+          .collection('users') // Corrigido: deve ser 'users'
+          .doc(user.id)
+          .set(user.toMap(), SetOptions(merge: true));
+    } catch (e) {
+      print('Erro ao salvar usuário no Firebase: $e');
+      throw Exception('Erro ao salvar usuário no Firebase: $e');
+    }
+  }
+
+  // Upload profile image to Firebase Storage
+  Future<String?> uploadProfileImage(String userId, File imageFile) async {
+    try {
+      // Remove a imagem anterior se existir
+      try {
+        final oldRef = _storage.ref().child('profile_images').child('$userId.jpg');
+        await oldRef.delete();
+      } catch (e) {
+        // Ignorar erro se a imagem não existir
+        print('Imagem anterior não encontrada ou já removida: $e');
+      }
+
+      final ref = _storage.ref().child('profile_images').child('$userId.jpg');
+      
+      final uploadTask = ref.putFile(
+        imageFile,
+        SettableMetadata(
+          contentType: 'image/jpeg',
+          customMetadata: {'userId': userId},
+        ),
+      );
+
+      final snapshot = await uploadTask;
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+      
+      return downloadUrl;
+    } catch (e) {
+      print('Erro ao fazer upload da imagem: $e');
+      throw Exception('Erro ao fazer upload da imagem: $e');
+    }
+  }
+
+  // Delete profile image from Firebase Storage
+  Future<void> deleteProfileImage(String userId) async {
+    try {
+      final ref = _storage.ref().child('profile_images').child('$userId.jpg');
+      await ref.delete();
+    } catch (e) {
+      print('Erro ao deletar imagem do perfil: $e');
+      // Não lança exceção pois a imagem pode não existir
+    }
+  }
+
+  // Update user profile in Firebase
+  Future<void> updateUserProfile({
+    required String userId,
+    String? name,
+    String? email,
+    File? profileImageFile,
+    String? profileImageUrl,
+    bool removeImage = false, // Novo parâmetro para remover imagem
+  }) async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null || currentUser.uid != userId) {
+        throw Exception('Usuário não autenticado');
+      }
+
+      // Get current user data from Firebase
+      UserModel? existingUser = await getUserById(userId);
+      
+      // If user doesn't exist in Firestore, create a basic one
+      if (existingUser == null) {
+        existingUser = UserModel(
+          id: userId,
+          name: currentUser.displayName ?? name ?? 'Usuário',
+          email: currentUser.email ?? email ?? '',
+          createdAt: DateTime.now(),
+          lastLoginAt: DateTime.now(),
+          studyTimeMinutes: 0,
+          completedActivities: 0,
+          completionRate: 0,
+        );
+      }
+
+      String? imageUrl = existingUser.profileImageUrl;
+
+      // Handle image operations
+      if (removeImage) {
+        // Remove image
+        if (imageUrl != null) {
+          await deleteProfileImage(userId);
+        }
+        imageUrl = null;
+      } else if (profileImageFile != null) {
+        // Upload new image
+        imageUrl = await uploadProfileImage(userId, profileImageFile);
+      } else if (profileImageUrl != null) {
+        // Use provided URL
+        imageUrl = profileImageUrl;
+      }
+
+      // Create updated user model
+      final updatedUser = existingUser.copyWith(
+        name: name,
+        email: email,
+        profileImageUrl: imageUrl,
+        lastLoginAt: DateTime.now(),
+      );
+
+      // Save to Firebase
+      await createOrUpdateUserInFirebase(updatedUser);
+
+      // Update Firebase Auth profile
+      if (name != null || imageUrl != existingUser.profileImageUrl) {
+        await currentUser.updateDisplayName(name ?? currentUser.displayName);
+        await currentUser.updatePhotoURL(imageUrl);
+        await currentUser.reload();
+      }
+
+      // Save locally for offline access
+      await saveUser(updatedUser);
+
+    } catch (e) {
+      print('Erro ao atualizar perfil: $e');
+      throw Exception('Erro ao atualizar perfil: $e');
+    }
+  }
+
+  // Get current logged user (try Firebase first, then local storage)
   Future<UserModel?> getCurrentUser() async {
     try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      
+      if (currentUser != null) {
+        // Try to get from Firebase first
+        UserModel? firebaseUser = await getUserById(currentUser.uid);
+        
+        // If not found in Firebase, create from Auth data
+        if (firebaseUser == null) {
+          firebaseUser = UserModel(
+            id: currentUser.uid,
+            name: currentUser.displayName ?? 'Usuário',
+            email: currentUser.email ?? '',
+            profileImageUrl: currentUser.photoURL,
+            createdAt: DateTime.now(),
+            lastLoginAt: DateTime.now(),
+            studyTimeMinutes: 0,
+            completedActivities: 0,
+            completionRate: 0,
+          );
+          
+          // Save to Firebase for future use
+          await createOrUpdateUserInFirebase(firebaseUser);
+        }
+        
+        // Save locally and return
+        await saveUser(firebaseUser);
+        return firebaseUser;
+      }
+
+      // If no Firebase user, try local storage
       final prefs = await SharedPreferences.getInstance();
       final userJson = prefs.getString(_userKey);
 
@@ -35,10 +206,10 @@ class UserService {
         return UserModel.fromJson(userMap);
       }
 
-      // Return mock data if no user is stored (for testing)
-      return _getMockUser();
+      return null;
     } catch (e) {
-      throw Exception('Erro ao carregar dados do usuário: $e');
+      print('Erro ao carregar dados do usuário: $e');
+      return null;
     }
   }
 
@@ -51,32 +222,6 @@ class UserService {
       await prefs.setBool(_isLoggedInKey, true);
     } catch (e) {
       throw Exception('Erro ao salvar dados do usuário: $e');
-    }
-  }
-
-  // Update user profile
-  Future<UserModel> updateUserProfile({
-    required String userId,
-    String? name,
-    String? email,
-    String? profileImageUrl,
-  }) async {
-    try {
-      final currentUser = await getCurrentUser();
-      if (currentUser == null) {
-        throw Exception('Usuário não encontrado');
-      }
-
-      final updatedUser = currentUser.copyWith(
-        name: name,
-        email: email,
-        profileImageUrl: profileImageUrl,
-      );
-
-      await saveUser(updatedUser);
-      return updatedUser;
-    } catch (e) {
-      throw Exception('Erro ao atualizar perfil: $e');
     }
   }
 
@@ -101,7 +246,12 @@ class UserService {
         lastLoginAt: DateTime.now(),
       );
 
+      // Save to Firebase
+      await createOrUpdateUserInFirebase(updatedUser);
+      
+      // Save locally
       await saveUser(updatedUser);
+      
       return updatedUser;
     } catch (e) {
       throw Exception('Erro ao atualizar progresso: $e');
@@ -111,8 +261,8 @@ class UserService {
   // Check if user is logged in
   Future<bool> isLoggedIn() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getBool(_isLoggedInKey) ?? false;
+      final currentUser = FirebaseAuth.instance.currentUser;
+      return currentUser != null;
     } catch (e) {
       return false;
     }
@@ -121,6 +271,7 @@ class UserService {
   // Logout user
   Future<void> logout() async {
     try {
+      await FirebaseAuth.instance.signOut();
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_userKey);
       await prefs.setBool(_isLoggedInKey, false);
@@ -159,68 +310,21 @@ class UserService {
     }
   }
 
-  // Mock user for testing (remove in production)
-  UserModel _getMockUser() {
-    return UserModel(
-      id: 'mock_user_123',
-      name: 'João Silva',
-      email: 'joao.silva@email.com',
-      studyTimeMinutes: 4223, // 70h23min
-      completedActivities: 55,
-      completionRate: 275, // This gives us 20% completion rate
-      createdAt: DateTime.now().subtract(const Duration(days: 30)),
-      lastLoginAt: DateTime.now(),
-    );
-  }
-
-  // Simulate login (replace with real authentication)
-  Future<UserModel> login(String email, String password) async {
+  // Sync user data from Firebase (useful for refreshing data)
+  Future<UserModel?> syncUserFromFirebase() async {
     try {
-      // Simulate API call delay
-      await Future.delayed(const Duration(seconds: 2));
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) return null;
 
-      // Mock validation
-      if (email.isNotEmpty && password.isNotEmpty) {
-        final user = _getMockUser().copyWith(
-          email: email,
-          lastLoginAt: DateTime.now(),
-        );
-
-        await saveUser(user);
-        return user;
-      } else {
-        throw Exception('Email e senha são obrigatórios');
+      final firebaseUser = await getUserById(currentUser.uid);
+      if (firebaseUser != null) {
+        await saveUser(firebaseUser);
       }
+      
+      return firebaseUser;
     } catch (e) {
-      throw Exception('Erro ao fazer login: $e');
-    }
-  }
-
-  // Simulate registration (replace with real API)
-  Future<UserModel> register({
-    required String name,
-    required String email,
-    required String password,
-  }) async {
-    try {
-      // Simulate API call delay
-      await Future.delayed(const Duration(seconds: 2));
-
-      final user = UserModel(
-        id: 'user_${DateTime.now().millisecondsSinceEpoch}',
-        name: name,
-        email: email,
-        studyTimeMinutes: 0,
-        completedActivities: 0,
-        completionRate: 0,
-        createdAt: DateTime.now(),
-        lastLoginAt: DateTime.now(),
-      );
-
-      await saveUser(user);
-      return user;
-    } catch (e) {
-      throw Exception('Erro ao criar conta: $e');
+      print('Erro ao sincronizar dados: $e');
+      return null;
     }
   }
 }

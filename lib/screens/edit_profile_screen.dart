@@ -59,6 +59,66 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
+  Future<void> _takePhoto() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 70,
+        maxWidth: 500,
+        maxHeight: 500,
+      );
+
+      if (image != null) {
+        setState(() {
+          _selectedImage = File(image.path);
+        });
+      }
+    } catch (e) {
+      _showErrorSnackBar('Erro ao tirar foto: $e');
+    }
+  }
+
+  void _showImagePickerOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Galeria'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickImage();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_camera),
+                title: const Text('Câmera'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _takePhoto();
+                },
+              ),
+              if (_selectedImage != null || widget.user.profileImageUrl != null)
+                ListTile(
+                  leading: const Icon(Icons.delete),
+                  title: const Text('Remover foto'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    setState(() {
+                      _selectedImage = null;
+                    });
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -69,20 +129,38 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     });
 
     try {
+      // Validate that name and email are not empty
+      final name = _nameController.text.trim();
+      final email = _emailController.text.trim();
+
+      if (name.isEmpty) {
+        throw Exception('Nome é obrigatório');
+      }
+
+      if (email.isEmpty) {
+        throw Exception('Email é obrigatório');
+      }
+
+      // Update user profile in Firebase
       await _userService.updateUserProfile(
         userId: widget.user.id,
-        name: _nameController.text.trim(),
-        email: _emailController.text.trim(),
-        profileImageUrl:
-            _selectedImage?.path, // In real app, upload to server first
+        name: name,
+        email: email,
+        profileImageFile: _selectedImage,
       );
 
       if (mounted) {
         _showSuccessSnackBar('Perfil atualizado com sucesso!');
-        Navigator.of(context).pop(true); // Return true to indicate success
+        
+        // Wait a bit to show the success message
+        await Future.delayed(const Duration(milliseconds: 500));
+        
+        // Return true to indicate success and trigger reload
+        Navigator.of(context).pop(true);
       }
     } catch (e) {
-      _showErrorSnackBar('Erro ao atualizar perfil: $e');
+      print('Erro ao salvar perfil: $e');
+      _showErrorSnackBar('Erro ao atualizar perfil: ${e.toString().replaceAll('Exception: ', '')}');
     } finally {
       if (mounted) {
         setState(() {
@@ -93,65 +171,123 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   void _showSuccessSnackBar(String message) {
+    if (!mounted) return;
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.green[600],
         behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
       ),
     );
   }
 
   void _showErrorSnackBar(String message) {
+    if (!mounted) return;
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
+        content: Row(
+          children: [
+            const Icon(Icons.error, color: Colors.white),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.red[600],
         behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
       ),
     );
   }
 
   Widget _buildProfileImage() {
     return GestureDetector(
-      onTap: _pickImage,
-      child: Container(
-        width: 120,
-        height: 120,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: const Color(0xFF2C3E50),
-          border: Border.all(
-            color: Colors.white,
-            width: 4,
-          ),
-        ),
-        child: _selectedImage != null
-            ? ClipOval(
-                child: Image.file(
-                  _selectedImage!,
-                  fit: BoxFit.cover,
-                ),
-              )
-            : widget.user.profileImageUrl != null
+      onTap: _showImagePickerOptions,
+      child: Stack(
+        children: [
+          Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0xFF2C3E50),
+              border: Border.all(
+                color: Colors.white,
+                width: 4,
+              ),
+            ),
+            child: _selectedImage != null
                 ? ClipOval(
-                    child: Image.network(
-                      widget.user.profileImageUrl!,
+                    child: Image.file(
+                      _selectedImage!,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Icon(
-                          Icons.person,
-                          size: 60,
-                          color: Colors.white,
-                        );
-                      },
                     ),
                   )
-                : const Icon(
-                    Icons.person,
-                    size: 60,
-                    color: Colors.white,
-                  ),
+                : widget.user.profileImageUrl != null
+                    ? ClipOval(
+                        child: Image.network(
+                          widget.user.profileImageUrl!,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return const Center(
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Icon(
+                              Icons.person,
+                              size: 60,
+                              color: Colors.white,
+                            );
+                          },
+                        ),
+                      )
+                    : const Icon(
+                        Icons.person,
+                        size: 60,
+                        color: Colors.white,
+                      ),
+          ),
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: const Color(0xFF2C3E50),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white,
+                  width: 2,
+                ),
+              ),
+              child: const Icon(
+                Icons.camera_alt,
+                color: Colors.white,
+                size: 18,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -179,7 +315,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 child: Row(
                   children: [
                     IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
                       icon: const Icon(
                         Icons.arrow_back,
                         color: Colors.white,
@@ -225,7 +361,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               _buildProfileImage(),
                               const SizedBox(height: 12),
                               TextButton.icon(
-                                onPressed: _pickImage,
+                                onPressed: _isLoading ? null : _showImagePickerOptions,
                                 icon: const Icon(Icons.camera_alt),
                                 label: const Text('Alterar Foto'),
                                 style: TextButton.styleFrom(
@@ -252,6 +388,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             ),
                             child: TextFormField(
                               controller: _nameController,
+                              enabled: !_isLoading,
                               decoration: const InputDecoration(
                                 labelText: 'Nome',
                                 prefixIcon: Icon(Icons.person_outline),
@@ -287,6 +424,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             ),
                             child: TextFormField(
                               controller: _emailController,
+                              enabled: !_isLoading,
                               keyboardType: TextInputType.emailAddress,
                               decoration: const InputDecoration(
                                 labelText: 'Email',
