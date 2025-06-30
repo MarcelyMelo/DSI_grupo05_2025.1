@@ -5,21 +5,24 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user.dart';
+import 'dart:typed_data'; // Add this import
+import 'package:flutter/foundation.dart'; // Add this import
 
 class UserService {
   static const String _userKey = 'current_user';
   static const String _isLoggedInKey = 'is_logged_in';
-  
+
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
   Future<UserModel?> getUserById(String uid) async {
     try {
       DocumentSnapshot doc = await _firestore
-          .collection('users') // Corrigido: deve ser 'users' para coincidir com as regras
+          .collection(
+              'users') // Corrigido: deve ser 'users' para coincidir com as regras
           .doc(uid)
           .get();
-      
+
       if (doc.exists) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
         // Adiciona o ID se não estiver presente nos dados
@@ -51,7 +54,8 @@ class UserService {
     try {
       // Remove a imagem anterior se existir
       try {
-        final oldRef = _storage.ref().child('profile_images').child('$userId.jpg');
+        final oldRef =
+            _storage.ref().child('profile_images').child('$userId.jpg');
         await oldRef.delete();
       } catch (e) {
         // Ignorar erro se a imagem não existir
@@ -59,7 +63,7 @@ class UserService {
       }
 
       final ref = _storage.ref().child('profile_images').child('$userId.jpg');
-      
+
       final uploadTask = ref.putFile(
         imageFile,
         SettableMetadata(
@@ -70,7 +74,7 @@ class UserService {
 
       final snapshot = await uploadTask;
       final downloadUrl = await snapshot.ref.getDownloadURL();
-      
+
       return downloadUrl;
     } catch (e) {
       print('Erro ao fazer upload da imagem: $e');
@@ -89,91 +93,15 @@ class UserService {
     }
   }
 
-  // Update user profile in Firebase
-  Future<void> updateUserProfile({
-    required String userId,
-    String? name,
-    String? email,
-    File? profileImageFile,
-    String? profileImageUrl,
-    bool removeImage = false, // Novo parâmetro para remover imagem
-  }) async {
-    try {
-      final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser == null || currentUser.uid != userId) {
-        throw Exception('Usuário não autenticado');
-      }
-
-      // Get current user data from Firebase
-      UserModel? existingUser = await getUserById(userId);
-      
-      // If user doesn't exist in Firestore, create a basic one
-      if (existingUser == null) {
-        existingUser = UserModel(
-          id: userId,
-          name: currentUser.displayName ?? name ?? 'Usuário',
-          email: currentUser.email ?? email ?? '',
-          createdAt: DateTime.now(),
-          lastLoginAt: DateTime.now(),
-          studyTimeMinutes: 0,
-          completedActivities: 0,
-          completionRate: 0,
-        );
-      }
-
-      String? imageUrl = existingUser.profileImageUrl;
-
-      // Handle image operations
-      if (removeImage) {
-        // Remove image
-        if (imageUrl != null) {
-          await deleteProfileImage(userId);
-        }
-        imageUrl = null;
-      } else if (profileImageFile != null) {
-        // Upload new image
-        imageUrl = await uploadProfileImage(userId, profileImageFile);
-      } else if (profileImageUrl != null) {
-        // Use provided URL
-        imageUrl = profileImageUrl;
-      }
-
-      // Create updated user model
-      final updatedUser = existingUser.copyWith(
-        name: name,
-        email: email,
-        profileImageUrl: imageUrl,
-        lastLoginAt: DateTime.now(),
-      );
-
-      // Save to Firebase
-      await createOrUpdateUserInFirebase(updatedUser);
-
-      // Update Firebase Auth profile
-      if (name != null || imageUrl != existingUser.profileImageUrl) {
-        await currentUser.updateDisplayName(name ?? currentUser.displayName);
-        await currentUser.updatePhotoURL(imageUrl);
-        await currentUser.reload();
-      }
-
-      // Save locally for offline access
-      await saveUser(updatedUser);
-
-    } catch (e) {
-      print('Erro ao atualizar perfil: $e');
-      throw Exception('Erro ao atualizar perfil: $e');
-    }
-  }
-
   // Get current logged user (try Firebase first, then local storage)
   Future<UserModel?> getCurrentUser() async {
     try {
       final currentUser = FirebaseAuth.instance.currentUser;
-      
+
       if (currentUser != null) {
         // Try to get from Firebase first
         UserModel? firebaseUser = await getUserById(currentUser.uid);
-        
+
         // If not found in Firebase, create from Auth data
         if (firebaseUser == null) {
           firebaseUser = UserModel(
@@ -187,11 +115,11 @@ class UserService {
             completedActivities: 0,
             completionRate: 0,
           );
-          
+
           // Save to Firebase for future use
           await createOrUpdateUserInFirebase(firebaseUser);
         }
-        
+
         // Save locally and return
         await saveUser(firebaseUser);
         return firebaseUser;
@@ -248,10 +176,10 @@ class UserService {
 
       // Save to Firebase
       await createOrUpdateUserInFirebase(updatedUser);
-      
+
       // Save locally
       await saveUser(updatedUser);
-      
+
       return updatedUser;
     } catch (e) {
       throw Exception('Erro ao atualizar progresso: $e');
@@ -320,11 +248,125 @@ class UserService {
       if (firebaseUser != null) {
         await saveUser(firebaseUser);
       }
-      
+
       return firebaseUser;
     } catch (e) {
       print('Erro ao sincronizar dados: $e');
       return null;
+    }
+  }
+
+  // Add this method to handle web image uploads
+  Future<String?> uploadProfileImageWeb(
+      String userId, Uint8List imageBytes, String fileName) async {
+    try {
+      // Remove the old image if it exists
+      try {
+        final oldRef =
+            _storage.ref().child('profile_images').child('$userId.jpg');
+        await oldRef.delete();
+      } catch (e) {
+        print('Imagem anterior não encontrada ou já removida: $e');
+      }
+
+      final ref = _storage.ref().child('profile_images').child('$userId.jpg');
+
+      final uploadTask = ref.putData(
+        imageBytes,
+        SettableMetadata(
+          contentType: 'image/jpeg',
+          customMetadata: {'userId': userId, 'originalName': fileName},
+        ),
+      );
+
+      final snapshot = await uploadTask;
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+
+      return downloadUrl;
+    } catch (e) {
+      print('Erro ao fazer upload da imagem (web): $e');
+      throw Exception('Erro ao fazer upload da imagem: $e');
+    }
+  }
+
+// Updated updateUserProfile method
+  Future<void> updateUserProfile({
+    required String userId,
+    String? name,
+    String? email,
+    File? profileImageFile,
+    Uint8List? webImageBytes, // New parameter for web
+    String? webImageName, // New parameter for web
+    String? profileImageUrl,
+    bool removeImage = false,
+  }) async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null || currentUser.uid != userId) {
+        throw Exception('Usuário não autenticado');
+      }
+
+      // Get current user data from Firebase
+      UserModel? existingUser = await getUserById(userId);
+
+      // If user doesn't exist in Firestore, create a basic one
+      if (existingUser == null) {
+        existingUser = UserModel(
+          id: userId,
+          name: currentUser.displayName ?? name ?? 'Usuário',
+          email: currentUser.email ?? email ?? '',
+          createdAt: DateTime.now(),
+          lastLoginAt: DateTime.now(),
+          studyTimeMinutes: 0,
+          completedActivities: 0,
+          completionRate: 0,
+        );
+      }
+
+      String? imageUrl = existingUser.profileImageUrl;
+
+      // Handle image operations
+      if (removeImage) {
+        // Remove image
+        if (imageUrl != null) {
+          await deleteProfileImage(userId);
+        }
+        imageUrl = null;
+      } else if (kIsWeb && webImageBytes != null) {
+        // Upload web image
+        imageUrl = await uploadProfileImageWeb(
+            userId, webImageBytes, webImageName ?? 'profile.jpg');
+      } else if (!kIsWeb && profileImageFile != null) {
+        // Upload mobile image
+        imageUrl = await uploadProfileImage(userId, profileImageFile);
+      } else if (profileImageUrl != null) {
+        // Use provided URL
+        imageUrl = profileImageUrl;
+      }
+
+      // Create updated user model
+      final updatedUser = existingUser.copyWith(
+        name: name,
+        email: email,
+        profileImageUrl: imageUrl,
+        lastLoginAt: DateTime.now(),
+      );
+
+      // Save to Firebase
+      await createOrUpdateUserInFirebase(updatedUser);
+
+      // Update Firebase Auth profile
+      if (name != null || imageUrl != existingUser.profileImageUrl) {
+        await currentUser.updateDisplayName(name ?? currentUser.displayName);
+        await currentUser.updatePhotoURL(imageUrl);
+        await currentUser.reload();
+      }
+
+      // Save locally for offline access
+      await saveUser(updatedUser);
+    } catch (e) {
+      print('Erro ao atualizar perfil: $e');
+      throw Exception('Erro ao atualizar perfil: $e');
     }
   }
 }

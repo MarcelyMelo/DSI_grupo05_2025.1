@@ -3,6 +3,8 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../models/user.dart';
 import '../services/user_service.dart';
+import 'package:flutter/foundation.dart'; // Add this import
+import 'dart:typed_data'; // Add this import for web support
 
 class EditProfileScreen extends StatefulWidget {
   final UserModel user;
@@ -24,6 +26,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   bool _isLoading = false;
   File? _selectedImage;
+  Uint8List? _webImageBytes; // For web platform
+  String? _webImageName; // For web platform
   final ImagePicker _imagePicker = ImagePicker();
 
   @override
@@ -50,9 +54,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       );
 
       if (image != null) {
-        setState(() {
-          _selectedImage = File(image.path);
-        });
+        if (kIsWeb) {
+          // For web platform
+          final bytes = await image.readAsBytes();
+          setState(() {
+            _webImageBytes = bytes;
+            _webImageName = image.name;
+            _selectedImage = null; // Clear mobile image
+          });
+        } else {
+          // For mobile platforms
+          setState(() {
+            _selectedImage = File(image.path);
+            _webImageBytes = null; // Clear web image
+            _webImageName = null;
+          });
+        }
       }
     } catch (e) {
       _showErrorSnackBar('Erro ao selecionar imagem: $e');
@@ -69,9 +86,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       );
 
       if (image != null) {
-        setState(() {
-          _selectedImage = File(image.path);
-        });
+        if (kIsWeb) {
+          // For web platform
+          final bytes = await image.readAsBytes();
+          setState(() {
+            _webImageBytes = bytes;
+            _webImageName = image.name;
+            _selectedImage = null; // Clear mobile image
+          });
+        } else {
+          // For mobile platforms
+          setState(() {
+            _selectedImage = File(image.path);
+            _webImageBytes = null; // Clear web image
+            _webImageName = null;
+          });
+        }
       }
     } catch (e) {
       _showErrorSnackBar('Erro ao tirar foto: $e');
@@ -93,15 +123,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   _pickImage();
                 },
               ),
-              ListTile(
-                leading: const Icon(Icons.photo_camera),
-                title: const Text('Câmera'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _takePhoto();
-                },
-              ),
-              if (_selectedImage != null || widget.user.profileImageUrl != null)
+              if (!kIsWeb) // Camera option only for mobile
+                ListTile(
+                  leading: const Icon(Icons.photo_camera),
+                  title: const Text('Câmera'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _takePhoto();
+                  },
+                ),
+              if (_hasSelectedImage() || widget.user.profileImageUrl != null)
                 ListTile(
                   leading: const Icon(Icons.delete),
                   title: const Text('Remover foto'),
@@ -109,6 +140,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     Navigator.of(context).pop();
                     setState(() {
                       _selectedImage = null;
+                      _webImageBytes = null;
+                      _webImageName = null;
                     });
                   },
                 ),
@@ -119,99 +152,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  Future<void> _saveProfile() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      // Validate that name and email are not empty
-      final name = _nameController.text.trim();
-      final email = _emailController.text.trim();
-
-      if (name.isEmpty) {
-        throw Exception('Nome é obrigatório');
-      }
-
-      if (email.isEmpty) {
-        throw Exception('Email é obrigatório');
-      }
-
-      // Update user profile in Firebase
-      await _userService.updateUserProfile(
-        userId: widget.user.id,
-        name: name,
-        email: email,
-        profileImageFile: _selectedImage,
-      );
-
-      if (mounted) {
-        _showSuccessSnackBar('Perfil atualizado com sucesso!');
-        
-        // Wait a bit to show the success message
-        await Future.delayed(const Duration(milliseconds: 500));
-        
-        // Return true to indicate success and trigger reload
-        Navigator.of(context).pop(true);
-      }
-    } catch (e) {
-      print('Erro ao salvar perfil: $e');
-      _showErrorSnackBar('Erro ao atualizar perfil: ${e.toString().replaceAll('Exception: ', '')}');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  void _showSuccessSnackBar(String message) {
-    if (!mounted) return;
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle, color: Colors.white),
-            const SizedBox(width: 8),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: Colors.green[600],
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-      ),
-    );
-  }
-
-  void _showErrorSnackBar(String message) {
-    if (!mounted) return;
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.error, color: Colors.white),
-            const SizedBox(width: 8),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: Colors.red[600],
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-      ),
-    );
+  bool _hasSelectedImage() {
+    return _selectedImage != null || _webImageBytes != null;
   }
 
   Widget _buildProfileImage() {
@@ -230,41 +172,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 width: 4,
               ),
             ),
-            child: _selectedImage != null
-                ? ClipOval(
-                    child: Image.file(
-                      _selectedImage!,
-                      fit: BoxFit.cover,
-                    ),
-                  )
-                : widget.user.profileImageUrl != null
-                    ? ClipOval(
-                        child: Image.network(
-                          widget.user.profileImageUrl!,
-                          fit: BoxFit.cover,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return const Center(
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            );
-                          },
-                          errorBuilder: (context, error, stackTrace) {
-                            return const Icon(
-                              Icons.person,
-                              size: 60,
-                              color: Colors.white,
-                            );
-                          },
-                        ),
-                      )
-                    : const Icon(
-                        Icons.person,
-                        size: 60,
-                        color: Colors.white,
-                      ),
+            child: _buildImageWidget(),
           ),
           Positioned(
             bottom: 0,
@@ -292,6 +200,185 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
+  Widget _buildImageWidget() {
+    // Priority: selected image > existing profile image > default icon
+    if (kIsWeb && _webImageBytes != null) {
+      // Web platform with selected image
+      return ClipOval(
+        child: Image.memory(
+          _webImageBytes!,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return const Icon(
+              Icons.person,
+              size: 60,
+              color: Colors.white,
+            );
+          },
+        ),
+      );
+    } else if (!kIsWeb && _selectedImage != null) {
+      // Mobile platform with selected image
+      return ClipOval(
+        child: Image.file(
+          _selectedImage!,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return const Icon(
+              Icons.person,
+              size: 60,
+              color: Colors.white,
+            );
+          },
+        ),
+      );
+    } else if (widget.user.profileImageUrl != null) {
+      // Existing profile image from server
+      return ClipOval(
+        child: Image.network(
+          widget.user.profileImageUrl!,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return const Center(
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2,
+              ),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) {
+            return const Icon(
+              Icons.person,
+              size: 60,
+              color: Colors.white,
+            );
+          },
+        ),
+      );
+    } else {
+      // Default icon
+      return const Icon(
+        Icons.person,
+        size: 60,
+        color: Colors.white,
+      );
+    }
+  }
+
+  Future<void> _saveProfile() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Validate that name and email are not empty
+      final name = _nameController.text.trim();
+      final email = _emailController.text.trim();
+
+      if (name.isEmpty) {
+        throw Exception('Nome é obrigatório');
+      }
+
+      if (email.isEmpty) {
+        throw Exception('Email é obrigatório');
+      }
+
+      // Determine if we have a selected image
+      File? imageFile;
+
+      if (kIsWeb && _webImageBytes != null) {
+        // For web, we need to create a temporary file or handle it differently
+        // You might need to update your UserService to handle Uint8List for web
+        // For now, we'll pass null and handle web images separately in the service
+        imageFile = null;
+      } else if (!kIsWeb && _selectedImage != null) {
+        // For mobile, use the selected file
+        imageFile = _selectedImage;
+      }
+
+      // Update user profile in Firebase
+      await _userService.updateUserProfile(
+        userId: widget.user.id,
+        name: name,
+        email: email,
+        profileImageFile: imageFile,
+        webImageBytes:
+            kIsWeb ? _webImageBytes : null, // You'll need to add this parameter
+        webImageName:
+            kIsWeb ? _webImageName : null, // You'll need to add this parameter
+      );
+
+      if (mounted) {
+        _showSuccessSnackBar('Perfil atualizado com sucesso!');
+
+        // Wait a bit to show the success message
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        // Return true to indicate success and trigger reload
+        Navigator.of(context).pop(true);
+      }
+    } catch (e) {
+      print('Erro ao salvar perfil: $e');
+      _showErrorSnackBar(
+          'Erro ao atualizar perfil: ${e.toString().replaceAll('Exception: ', '')}');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _showSuccessSnackBar(String message) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.green[600],
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
+  }
+
+  void _showErrorSnackBar(String message) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error, color: Colors.white),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.red[600],
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -315,7 +402,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 child: Row(
                   children: [
                     IconButton(
-                      onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                      onPressed:
+                          _isLoading ? null : () => Navigator.of(context).pop(),
                       icon: const Icon(
                         Icons.arrow_back,
                         color: Colors.white,
@@ -361,7 +449,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               _buildProfileImage(),
                               const SizedBox(height: 12),
                               TextButton.icon(
-                                onPressed: _isLoading ? null : _showImagePickerOptions,
+                                onPressed:
+                                    _isLoading ? null : _showImagePickerOptions,
                                 icon: const Icon(Icons.camera_alt),
                                 label: const Text('Alterar Foto'),
                                 style: TextButton.styleFrom(
