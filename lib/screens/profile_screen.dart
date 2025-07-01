@@ -31,15 +31,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       // Pegar o usuário atual do Firebase Auth
       _firebaseUser = FirebaseAuth.instance.currentUser;
-      
+
       if (_firebaseUser != null) {
         print('UID do usuário: ${_firebaseUser!.uid}');
         print('Email: ${_firebaseUser!.email}');
         print('Nome (displayName): ${_firebaseUser!.displayName}');
-        
+
         // Carregar dados completos do usuário do Firestore
         _user = await _userService.getUserById(_firebaseUser!.uid);
-        
+
         // Se não encontrou no Firestore, criar um usuário básico com dados do Auth
         if (_user == null && _firebaseUser != null) {
           _user = UserModel(
@@ -54,7 +54,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             completionRate: 0,
           );
         }
-        
+
         // Ouvir mudanças no estado de autenticação
         FirebaseAuth.instance.authStateChanges().listen((User? user) {
           if (user != null) {
@@ -94,31 +94,167 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // Método para pegar informações específicas do provedor
   Map<String, String> _getProviderInfo() {
     if (_firebaseUser == null) return {};
-    
+
     Map<String, String> providerInfo = {};
-    
+
     for (final providerProfile in _firebaseUser!.providerData) {
       // ID do provedor (google.com, apple.com, password, etc.)
       final provider = providerProfile.providerId;
-      
+
       // UID específico do provedor
       final uid = providerProfile.uid;
-      
+
       // Nome, email e foto do perfil
       final name = providerProfile.displayName;
       final emailAddress = providerProfile.email;
       final profilePhoto = providerProfile.photoURL;
-      
+
       providerInfo[provider] = 'Nome: $name, Email: $emailAddress';
-      
+
       print('Provedor: $provider');
       print('UID do provedor: $uid');
       print('Nome: $name');
       print('Email: $emailAddress');
       print('Foto: $profilePhoto');
     }
-    
+
     return providerInfo;
+  }
+
+  // Build profile image widget with proper handling of base64 and external URLs
+  Widget _buildProfileImage() {
+    // Priority: Firestore user image > Firebase Auth image > default icon
+
+    // First, check if user has a profile image in Firestore
+    if (_user?.profileImageUrl != null) {
+      if (_user!.hasBase64Image) {
+        // Display base64 image from Firestore
+        final imageBytes = _user!.imageBytes;
+        if (imageBytes != null) {
+          return Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              color: const Color(0xFF2C3E50),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white,
+                width: 4,
+              ),
+            ),
+            child: ClipOval(
+              child: Image.memory(
+                imageBytes,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  print('Erro ao carregar imagem base64: $error');
+                  return const Icon(
+                    Icons.person,
+                    size: 60,
+                    color: Colors.white,
+                  );
+                },
+              ),
+            ),
+          );
+        }
+      } else if (_user!.hasExternalImage) {
+        // Display external URL image from Firestore
+        return Container(
+          width: 120,
+          height: 120,
+          decoration: BoxDecoration(
+            color: const Color(0xFF2C3E50),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.white,
+              width: 4,
+            ),
+          ),
+          child: ClipOval(
+            child: Image.network(
+              _user!.profileImageUrl!,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return const Center(
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                print('Erro ao carregar imagem externa: $error');
+                return const Icon(
+                  Icons.person,
+                  size: 60,
+                  color: Colors.white,
+                );
+              },
+            ),
+          ),
+        );
+      }
+    }
+
+    // Fallback to Firebase Auth photo if no Firestore image
+    if (_firebaseUser?.photoURL != null) {
+      return Container(
+        width: 120,
+        height: 120,
+        decoration: BoxDecoration(
+          color: const Color(0xFF2C3E50),
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: Colors.white,
+            width: 4,
+          ),
+        ),
+        child: ClipOval(
+          child: Image.network(
+            _firebaseUser!.photoURL!,
+            fit: BoxFit.cover,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return const Center(
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              );
+            },
+            errorBuilder: (context, error, stackTrace) {
+              print('Erro ao carregar foto do Firebase Auth: $error');
+              return const Icon(
+                Icons.person,
+                size: 60,
+                color: Colors.white,
+              );
+            },
+          ),
+        ),
+      );
+    }
+
+    // Default avatar if no image is available
+    return Container(
+      width: 120,
+      height: 120,
+      decoration: BoxDecoration(
+        color: const Color(0xFF2C3E50),
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: Colors.white,
+          width: 4,
+        ),
+      ),
+      child: const Icon(
+        Icons.person,
+        size: 60,
+        color: Colors.white,
+      ),
+    );
   }
 
   @override
@@ -226,28 +362,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 const SizedBox(height: 40),
 
-                // Profile Avatar
-                Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2C3E50),
-                    shape: BoxShape.circle,
-                    image: _firebaseUser?.photoURL != null
-                        ? DecorationImage(
-                            image: NetworkImage(_firebaseUser!.photoURL!),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
-                  ),
-                  child: _firebaseUser?.photoURL == null
-                      ? const Icon(
-                          Icons.person,
-                          size: 60,
-                          color: Colors.white,
-                        )
-                      : null,
-                ),
+                // Profile Avatar - Updated to use the new method
+                _buildProfileImage(),
 
                 const SizedBox(height: 24),
 
