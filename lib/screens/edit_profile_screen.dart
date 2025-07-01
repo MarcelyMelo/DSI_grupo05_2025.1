@@ -151,10 +151,30 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       },
     );
   }
+  
 
-  bool _hasSelectedImage() {
-    return _selectedImage != null || _webImageBytes != null;
+  void _showSuccessSnackBar(String message) {
+    if (!mounted) return;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.green[600],
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
   }
+
 
   Widget _buildProfileImage() {
     return GestureDetector(
@@ -172,7 +192,41 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 width: 4,
               ),
             ),
-            child: _buildImageWidget(),
+            child: _selectedImage != null
+                ? ClipOval(
+                    child: Image.file(
+                      _selectedImage!,
+                      fit: BoxFit.cover,
+                    ),
+                  )
+                : widget.user.profileImageUrl != null
+                    ? ClipOval(
+                        child: Image.network(
+                          widget.user.profileImageUrl!,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return const Center(
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Icon(
+                              Icons.person,
+                              size: 60,
+                              color: Colors.white,
+                            );
+                          },
+                        ),
+                      )
+                    : const Icon(
+                        Icons.person,
+                        size: 60,
+                        color: Colors.white,
+                      ),
           ),
           Positioned(
             bottom: 0,
@@ -335,27 +389,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
-  void _showSuccessSnackBar(String message) {
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle, color: Colors.white),
-            const SizedBox(width: 8),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: Colors.green[600],
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-      ),
-    );
-  }
 
   void _showErrorSnackBar(String message) {
     if (!mounted) return;

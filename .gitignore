@@ -33,11 +33,14 @@ migrate_working_dir/
 .pub/
 /build/
 
+<<<<<<< HEAD
 # Flutter build artifacts
 windows/flutter/ephemeral/
 build/
 .dart_tool/
 
+=======
+>>>>>>> d6726c3638b5c25c38b75d6eb99940c4acbb559b
 # Symbolication related
 app.*.symbols
 

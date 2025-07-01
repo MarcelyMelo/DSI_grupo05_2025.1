@@ -11,7 +11,6 @@ import 'package:flutter/foundation.dart'; // Add this import
 class UserService {
   static const String _userKey = 'current_user';
   static const String _isLoggedInKey = 'is_logged_in';
-
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
@@ -63,7 +62,6 @@ class UserService {
       }
 
       final ref = _storage.ref().child('profile_images').child('$userId.jpg');
-
       final uploadTask = ref.putFile(
         imageFile,
         SettableMetadata(
@@ -74,7 +72,6 @@ class UserService {
 
       final snapshot = await uploadTask;
       final downloadUrl = await snapshot.ref.getDownloadURL();
-
       return downloadUrl;
     } catch (e) {
       print('Erro ao fazer upload da imagem: $e');
@@ -248,7 +245,6 @@ class UserService {
       if (firebaseUser != null) {
         await saveUser(firebaseUser);
       }
-
       return firebaseUser;
     } catch (e) {
       print('Erro ao sincronizar dados: $e');
