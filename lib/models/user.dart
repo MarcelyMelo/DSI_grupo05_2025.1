@@ -1,11 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
+import 'dart:typed_data';
 
 class UserModel {
   final String id;
   final String name;
   final String email;
-  final String? profileImageUrl;
-  final int studyTimeMinutes; // Total study time in minutes
+  final String? profileImageUrl; // Now stores base64 data URLs or external URLs
+  final int studyTimeMinutes;
   final int completedActivities;
   final int completionRate;
   final DateTime createdAt;
@@ -22,6 +24,33 @@ class UserModel {
     required this.createdAt,
     required this.lastLoginAt,
   });
+
+  // Check if profile image is a base64 data URL
+  bool get hasBase64Image {
+    return profileImageUrl != null &&
+        profileImageUrl!.startsWith('data:image/');
+  }
+
+  // Check if profile image is an external URL
+  bool get hasExternalImage {
+    return profileImageUrl != null &&
+        (profileImageUrl!.startsWith('http://') ||
+            profileImageUrl!.startsWith('https://'));
+  }
+
+  // Get base64 image bytes for display
+  Uint8List? get imageBytes {
+    if (!hasBase64Image) return null;
+
+    try {
+      // Extract base64 part from data URL
+      final base64String = profileImageUrl!.split(',')[1];
+      return base64Decode(base64String);
+    } catch (e) {
+      print('Erro ao decodificar imagem base64: $e');
+      return null;
+    }
+  }
 
   // Format study time as "70h23min"
   String getFormattedStudyTime() {
@@ -40,8 +69,10 @@ class UserModel {
       studyTimeMinutes: json['studyTimeInMinutes'] ?? 0,
       completedActivities: json['completedActivities'] ?? 0,
       completionRate: json['completionRate'] ?? 0,
-      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
-      lastLoginAt: DateTime.parse(json['lastLoginAt'] ?? DateTime.now().toIso8601String()),
+      createdAt:
+          DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
+      lastLoginAt: DateTime.parse(
+          json['lastLoginAt'] ?? DateTime.now().toIso8601String()),
     );
   }
 
@@ -65,18 +96,15 @@ class UserModel {
     if (dateValue == null) {
       return DateTime.now();
     }
-    
-    // If it's already a DateTime
+
     if (dateValue is DateTime) {
       return dateValue;
     }
-    
-    // If it's a Firestore Timestamp
+
     if (dateValue is Timestamp) {
       return dateValue.toDate();
     }
-    
-    // If it's a string, try to parse it
+
     if (dateValue is String) {
       try {
         return DateTime.parse(dateValue);
@@ -84,8 +112,7 @@ class UserModel {
         return DateTime.now();
       }
     }
-    
-    // If it's an int (milliseconds since epoch)
+
     if (dateValue is int) {
       try {
         return DateTime.fromMillisecondsSinceEpoch(dateValue);
@@ -93,8 +120,7 @@ class UserModel {
         return DateTime.now();
       }
     }
-    
-    // Default fallback
+
     return DateTime.now();
   }
 

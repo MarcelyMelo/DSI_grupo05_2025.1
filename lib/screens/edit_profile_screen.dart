@@ -3,8 +3,8 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../models/user.dart';
 import '../services/user_service.dart';
-import 'package:flutter/foundation.dart'; // Add this import
-import 'dart:typed_data'; // Add this import for web support
+import 'package:flutter/foundation.dart';
+import 'dart:typed_data';
 
 class EditProfileScreen extends StatefulWidget {
   final UserModel user;
@@ -26,8 +26,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   bool _isLoading = false;
   File? _selectedImage;
-  Uint8List? _webImageBytes; // For web platform
-  String? _webImageName; // For web platform
+  Uint8List? _webImageBytes;
+  String? _webImageName;
+  bool _shouldRemoveImage =
+      false; // Flag to track if user wants to remove image
   final ImagePicker _imagePicker = ImagePicker();
 
   @override
@@ -44,6 +46,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
+  // Helper method to check if user has selected a new image
+  bool _hasSelectedImage() {
+    return (kIsWeb && _webImageBytes != null) ||
+        (!kIsWeb && _selectedImage != null);
+  }
+
+  // Helper method to check if there's any image to display (selected or existing)
+  bool _hasAnyImage() {
+    return _hasSelectedImage() ||
+        (!_shouldRemoveImage && widget.user.profileImageUrl != null);
+  }
+
   Future<void> _pickImage() async {
     try {
       final XFile? image = await _imagePicker.pickImage(
@@ -55,19 +69,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       if (image != null) {
         if (kIsWeb) {
-          // For web platform
           final bytes = await image.readAsBytes();
           setState(() {
             _webImageBytes = bytes;
             _webImageName = image.name;
-            _selectedImage = null; // Clear mobile image
+            _selectedImage = null;
+            _shouldRemoveImage = false;
           });
         } else {
-          // For mobile platforms
           setState(() {
             _selectedImage = File(image.path);
-            _webImageBytes = null; // Clear web image
+            _webImageBytes = null;
             _webImageName = null;
+            _shouldRemoveImage = false;
           });
         }
       }
@@ -87,25 +101,34 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       if (image != null) {
         if (kIsWeb) {
-          // For web platform
           final bytes = await image.readAsBytes();
           setState(() {
             _webImageBytes = bytes;
             _webImageName = image.name;
-            _selectedImage = null; // Clear mobile image
+            _selectedImage = null;
+            _shouldRemoveImage = false;
           });
         } else {
-          // For mobile platforms
           setState(() {
             _selectedImage = File(image.path);
-            _webImageBytes = null; // Clear web image
+            _webImageBytes = null;
             _webImageName = null;
+            _shouldRemoveImage = false;
           });
         }
       }
     } catch (e) {
       _showErrorSnackBar('Erro ao tirar foto: $e');
     }
+  }
+
+  void _removeImage() {
+    setState(() {
+      _selectedImage = null;
+      _webImageBytes = null;
+      _webImageName = null;
+      _shouldRemoveImage = true;
+    });
   }
 
   void _showImagePickerOptions() {
@@ -123,7 +146,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   _pickImage();
                 },
               ),
-              if (!kIsWeb) // Camera option only for mobile
+              if (!kIsWeb)
                 ListTile(
                   leading: const Icon(Icons.photo_camera),
                   title: const Text('Câmera'),
@@ -132,17 +155,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     _takePhoto();
                   },
                 ),
-              if (_hasSelectedImage() || widget.user.profileImageUrl != null)
+              if (_hasAnyImage())
                 ListTile(
                   leading: const Icon(Icons.delete),
                   title: const Text('Remover foto'),
                   onTap: () {
                     Navigator.of(context).pop();
-                    setState(() {
-                      _selectedImage = null;
-                      _webImageBytes = null;
-                      _webImageName = null;
-                    });
+                    _removeImage();
                   },
                 ),
             ],
@@ -151,30 +170,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       },
     );
   }
-  
-
-  void _showSuccessSnackBar(String message) {
-    if (!mounted) return;
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle, color: Colors.white),
-            const SizedBox(width: 8),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: Colors.green[600],
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-      ),
-    );
-  }
-
 
   Widget _buildProfileImage() {
     return GestureDetector(
@@ -192,41 +187,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 width: 4,
               ),
             ),
-            child: _selectedImage != null
-                ? ClipOval(
-                    child: Image.file(
-                      _selectedImage!,
-                      fit: BoxFit.cover,
-                    ),
-                  )
-                : widget.user.profileImageUrl != null
-                    ? ClipOval(
-                        child: Image.network(
-                          widget.user.profileImageUrl!,
-                          fit: BoxFit.cover,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return const Center(
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            );
-                          },
-                          errorBuilder: (context, error, stackTrace) {
-                            return const Icon(
-                              Icons.person,
-                              size: 60,
-                              color: Colors.white,
-                            );
-                          },
-                        ),
-                      )
-                    : const Icon(
-                        Icons.person,
-                        size: 60,
-                        color: Colors.white,
-                      ),
+            child: _buildImageWidget(),
           ),
           Positioned(
             bottom: 0,
@@ -255,9 +216,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Widget _buildImageWidget() {
+    // If user wants to remove image, show default icon
+    if (_shouldRemoveImage) {
+      return const Icon(
+        Icons.person,
+        size: 60,
+        color: Colors.white,
+      );
+    }
+
     // Priority: selected image > existing profile image > default icon
     if (kIsWeb && _webImageBytes != null) {
-      // Web platform with selected image
       return ClipOval(
         child: Image.memory(
           _webImageBytes!,
@@ -272,7 +241,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ),
       );
     } else if (!kIsWeb && _selectedImage != null) {
-      // Mobile platform with selected image
       return ClipOval(
         child: Image.file(
           _selectedImage!,
@@ -287,37 +255,58 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ),
       );
     } else if (widget.user.profileImageUrl != null) {
-      // Existing profile image from server
-      return ClipOval(
-        child: Image.network(
-          widget.user.profileImageUrl!,
-          fit: BoxFit.cover,
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return const Center(
-              child: CircularProgressIndicator(
+      // Handle both base64 and external URLs
+      if (widget.user.hasBase64Image) {
+        // Display base64 image
+        final imageBytes = widget.user.imageBytes;
+        if (imageBytes != null) {
+          return ClipOval(
+            child: Image.memory(
+              imageBytes,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return const Icon(
+                  Icons.person,
+                  size: 60,
+                  color: Colors.white,
+                );
+              },
+            ),
+          );
+        }
+      } else if (widget.user.hasExternalImage) {
+        // Display external URL image
+        return ClipOval(
+          child: Image.network(
+            widget.user.profileImageUrl!,
+            fit: BoxFit.cover,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return const Center(
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              );
+            },
+            errorBuilder: (context, error, stackTrace) {
+              return const Icon(
+                Icons.person,
+                size: 60,
                 color: Colors.white,
-                strokeWidth: 2,
-              ),
-            );
-          },
-          errorBuilder: (context, error, stackTrace) {
-            return const Icon(
-              Icons.person,
-              size: 60,
-              color: Colors.white,
-            );
-          },
-        ),
-      );
-    } else {
-      // Default icon
-      return const Icon(
-        Icons.person,
-        size: 60,
-        color: Colors.white,
-      );
+              );
+            },
+          ),
+        );
+      }
     }
+
+    // Default icon
+    return const Icon(
+      Icons.person,
+      size: 60,
+      color: Colors.white,
+    );
   }
 
   Future<void> _saveProfile() async {
@@ -330,7 +319,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     });
 
     try {
-      // Validate that name and email are not empty
       final name = _nameController.text.trim();
       final email = _emailController.text.trim();
 
@@ -342,38 +330,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         throw Exception('Email é obrigatório');
       }
 
-      // Determine if we have a selected image
-      File? imageFile;
-
-      if (kIsWeb && _webImageBytes != null) {
-        // For web, we need to create a temporary file or handle it differently
-        // You might need to update your UserService to handle Uint8List for web
-        // For now, we'll pass null and handle web images separately in the service
-        imageFile = null;
-      } else if (!kIsWeb && _selectedImage != null) {
-        // For mobile, use the selected file
-        imageFile = _selectedImage;
-      }
-
       // Update user profile in Firebase
       await _userService.updateUserProfile(
         userId: widget.user.id,
         name: name,
         email: email,
-        profileImageFile: imageFile,
-        webImageBytes:
-            kIsWeb ? _webImageBytes : null, // You'll need to add this parameter
-        webImageName:
-            kIsWeb ? _webImageName : null, // You'll need to add this parameter
+        profileImageFile: !kIsWeb ? _selectedImage : null,
+        webImageBytes: kIsWeb ? _webImageBytes : null,
+        webImageName: kIsWeb ? _webImageName : null,
+        removeImage: _shouldRemoveImage,
       );
 
       if (mounted) {
         _showSuccessSnackBar('Perfil atualizado com sucesso!');
-
-        // Wait a bit to show the success message
         await Future.delayed(const Duration(milliseconds: 500));
-
-        // Return true to indicate success and trigger reload
         Navigator.of(context).pop(true);
       }
     } catch (e) {
@@ -389,6 +359,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
+  void _showSuccessSnackBar(String message) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.green[600],
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
+  }
 
   void _showErrorSnackBar(String message) {
     if (!mounted) return;
@@ -453,7 +444,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 40), // Balance the back button
+                    const SizedBox(width: 40),
                   ],
                 ),
               ),
