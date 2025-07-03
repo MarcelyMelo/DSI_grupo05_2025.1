@@ -21,30 +21,41 @@ class _CreateCollectionScreenState extends State<CreateCollectionScreen> {
     super.dispose();
   }
 
-  void _createCollection() {
+  Future<void> _createCollection() async {
     if (_formKey.currentState!.validate()) {
-      final newCollection = Collection(
-        name: _nameController.text,
-      );
+      try {
+        final newCollection = Collection(
+          name: _nameController.text,
+        );
 
-      // Adiciona a coleção ao service
-      widget.collectionService.addCollection(newCollection);
-      
-      // Debug para verificar se foi adicionada
-      print('Coleção criada: ${_nameController.text}');
-      print('Total de coleções: ${widget.collectionService.getAllCollections().length}');
-      
-      // MUDANÇA AQUI: Apenas volta para a tela anterior
-      // O setState() na FlashcardScreen vai atualizar automaticamente
-      Navigator.pop(context, "/flashcards");
-      
-      // Mostra mensagem de sucesso
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Coleção "${_nameController.text}" criada com sucesso!'),
-          backgroundColor: Colors.green,
-        ),
-      );
+        // Adiciona a coleção ao service
+        await widget.collectionService.addCollection(newCollection);
+
+        // Debug para verificar se foi adicionada
+        print('Coleção criada: ${_nameController.text}');
+        final collections = await widget.collectionService.getAllCollections();
+        print('Total de coleções: ${collections.length}');
+
+        // Volta para a tela anterior
+        Navigator.pop(context, "/flashcards");
+
+        // Mostra mensagem de sucesso
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content:
+                Text('Coleção "${_nameController.text}" criada com sucesso!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        // Mostra mensagem de erro
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao criar coleção: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

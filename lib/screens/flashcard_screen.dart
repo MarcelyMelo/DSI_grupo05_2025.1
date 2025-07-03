@@ -19,9 +19,10 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
   @override
   void initState() {
     super.initState();
-    _addSampleData();
+    //_addSampleData();
   }
 
+  /*
   void _addSampleData() {
     _collectionService.addCollection(
       Collection(
@@ -56,67 +57,68 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
         ],
       ),
     );
-  }
+  }*/
+
   void _navigateToEditCollection(Collection collection) {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => CollectionEditPage(
-        collection: collection,
-        collectionService: _collectionService,
-      ),
-    ),
-  ).then((hasChanges) {
-    // Atualiza a tela se houve mudanças
-    if (hasChanges == true) {
-      setState(() {});
-    }
-  });
-}
-
-Future<void> _deleteCollection(Collection collection) async {
-  final shouldDelete = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      backgroundColor: const Color(0xFF2A2A2A),
-      title: const Text(
-        'Excluir Coleção',
-        style: TextStyle(color: Colors.white),
-      ),
-      content: Text(
-        'Tem certeza que deseja excluir a coleção "${collection.name}"?\n\nTodos os flashcards serão perdidos.',
-        style: const TextStyle(color: Colors.white70),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancelar'),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CollectionEditPage(
+          collection: collection,
+          collectionService: _collectionService,
         ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(true),
-          style: TextButton.styleFrom(foregroundColor: Colors.red),
-          child: const Text('Excluir'),
-        ),
-      ],
-    ),
-  );
+      ),
+    ).then((hasChanges) {
+      // Atualiza a tela se houve mudanças
+      if (hasChanges == true) {
+        setState(() {});
+      }
+    });
+  }
 
-  if (shouldDelete == true) {
-    _collectionService.removeCollection(collection.name);
-    setState(() {});
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Coleção "${collection.name}" excluída'),
-        backgroundColor: Colors.red,
+  Future<void> _deleteCollection(Collection collection) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF2A2A2A),
+        title: const Text(
+          'Excluir Coleção',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          'Tem certeza que deseja excluir a coleção "${collection.name}"?\n\nTodos os flashcards serão perdidos.',
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Excluir'),
+          ),
+        ],
       ),
     );
+
+    if (shouldDelete == true) {
+      _collectionService.removeCollection(collection.name);
+      setState(() {});
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Coleção "${collection.name}" excluída'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
-    final collections = _collectionService.getAllCollections();
+    final collections = _collectionService.getAllCollectionsSync();
 
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A1A), // Fundo escuro como na imagem
@@ -174,7 +176,8 @@ Future<void> _deleteCollection(Collection collection) async {
             Expanded(
               child: ListView.separated(
                 itemCount: collections.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 24),
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 24),
                 itemBuilder: (context, index) {
                   return _buildCollectionSection(collections[index]);
                 },
@@ -239,72 +242,72 @@ Future<void> _deleteCollection(Collection collection) async {
   }
 
   Widget _buildCollectionSection(Collection collection) {
-  // Cores diferentes para cada coleção
-  final colors = [
-    const Color(0xFF4A90E2), // Azul
-    const Color(0xFF7ED321), // Verde
-    const Color(0xFFBD10E0), // Roxo
-    const Color(0xFFF5A623), // Laranja
-    const Color(0xFFD0021B), // Vermelho
-  ];
-  
-  final colorIndex = collection.name.hashCode % colors.length;
-  final collectionColor = colors[colorIndex.abs()];
+    // Cores diferentes para cada coleção
+    final colors = [
+      const Color(0xFF4A90E2), // Azul
+      const Color(0xFF7ED321), // Verde
+      const Color(0xFFBD10E0), // Roxo
+      const Color(0xFFF5A623), // Laranja
+      const Color(0xFFD0021B), // Vermelho
+    ];
 
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      // Header da coleção
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: collectionColor,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              collection.name,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(width: 8),
-            GestureDetector(
-              onTap: () => _navigateToEditCollection(collection),
-              child: const Icon(
-                Icons.edit,
-                size: 16,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(width: 4),
-            GestureDetector(
-              onTap: () => _deleteCollection(collection),
-              child: const Icon(
-                Icons.close,
-                size: 16,
-                color: Colors.white,
-              ),
-            ),
-          ],
-        ),
-      ),
-      const SizedBox(height: 12),
+    final colorIndex = collection.name.hashCode % colors.length;
+    final collectionColor = colors[colorIndex.abs()];
 
-      // Grid de flashcards (similar à imagem)
-      _buildFlashcardsGrid(collection.flashcards, collectionColor),
-    ],
-  );
-}
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header da coleção
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: collectionColor,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                collection.name,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () => _navigateToEditCollection(collection),
+                child: const Icon(
+                  Icons.edit,
+                  size: 16,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 4),
+              GestureDetector(
+                onTap: () => _deleteCollection(collection),
+                child: const Icon(
+                  Icons.close,
+                  size: 16,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Grid de flashcards (similar à imagem)
+        _buildFlashcardsGrid(collection.flashcards, collectionColor),
+      ],
+    );
+  }
 
   Widget _buildFlashcardsGrid(List<Flashcard> flashcards, Color color) {
     // Mostra no máximo 6 flashcards por coleção
     final displayCards = flashcards.take(6).toList();
-    
+
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
