@@ -17,24 +17,23 @@ class _EditTaskPageState extends State<EditTaskPage> {
   final _formKey = GlobalKey<FormState>();
 
   late TextEditingController _titleController;
+  late TextEditingController _descriptionController;
   DateTime? _dueDate;
   TimeOfDay? _dueTime;
   bool _isCompleted = false;
   bool _hasTag = false;
   bool _isAllDay = false;
   bool _shouldRepeat = false;
-  String _repeatFrequency = 'Todos os dias';
+  String _repeatFrequency = 'Daily';
 
-  // Novo: Tag selecionada e cor associada
   String? _selectedTag;
   Color? _selectedTagColor;
 
-  // Tags disponíveis e cores associadas
   final Map<String, Color> tags = {
-    'Nenhuma': Colors.transparent,
-    'Estudo': Colors.blue,
-    'Trabalho': Colors.red,
-    'Pessoal': Colors.green,
+    'None': Colors.transparent,
+    'Study': const Color(0xFF4299E1),
+    'Work': const Color(0xFFF56565),
+    'Personal': const Color(0xFF48BB78),
   };
 
   @override
@@ -43,21 +42,24 @@ class _EditTaskPageState extends State<EditTaskPage> {
     _controller = widget.controller;
 
     _titleController = TextEditingController(text: widget.task?.title ?? '');
+    _descriptionController = TextEditingController(text: widget.task?.description ?? '');
     _dueDate = widget.task?.dueDate ?? DateTime.now();
     _dueTime = TimeOfDay(
       hour: widget.task?.dueDate.hour ?? TimeOfDay.now().hour,
       minute: widget.task?.dueDate.minute ?? TimeOfDay.now().minute,
     );
     _isCompleted = widget.task?.isCompleted ?? false;
+    _isAllDay = widget.task?.isAllDay ?? false;
+    _shouldRepeat = widget.task?.shouldRepeat ?? false;
+    _repeatFrequency = widget.task?.repeatFrequency ?? 'Daily';
 
-    // Inicializa a tag selecionada e a cor, ou 'Nenhuma' se tag não estiver no mapa
     if (widget.task != null && tags.containsKey(widget.task!.tag)) {
       _selectedTag = widget.task!.tag;
       _selectedTagColor = tags[_selectedTag];
-      _hasTag = _selectedTag != 'Nenhuma' && _selectedTag!.isNotEmpty;
+      _hasTag = _selectedTag != 'None' && _selectedTag!.isNotEmpty;
     } else {
-      _selectedTag = 'Nenhuma';
-      _selectedTagColor = tags['Nenhuma'];
+      _selectedTag = 'None';
+      _selectedTagColor = tags['None'];
       _hasTag = false;
     }
   }
@@ -65,6 +67,7 @@ class _EditTaskPageState extends State<EditTaskPage> {
   @override
   void dispose() {
     _titleController.dispose();
+    _descriptionController.dispose();
     super.dispose();
   }
 
@@ -77,10 +80,10 @@ class _EditTaskPageState extends State<EditTaskPage> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: Color(0xFF4CAF50),
+            colorScheme: ColorScheme.dark(
+              primary: const Color(0xFF48BB78),
               onPrimary: Colors.white,
-              surface: Color(0xFF2D3748),
+              surface: const Color(0xFF2D3748),
               onSurface: Colors.white,
             ),
           ),
@@ -102,10 +105,10 @@ class _EditTaskPageState extends State<EditTaskPage> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: Color(0xFF4CAF50),
+            colorScheme: ColorScheme.dark(
+              primary: const Color(0xFF48BB78),
               onPrimary: Colors.white,
-              surface: Color(0xFF2D3748),
+              surface: const Color(0xFF2D3748),
               onSurface: Colors.white,
             ),
           ),
@@ -126,32 +129,37 @@ class _EditTaskPageState extends State<EditTaskPage> {
         _dueDate!.year,
         _dueDate!.month,
         _dueDate!.day,
-        _dueTime!.hour,
-        _dueTime!.minute,
+        _isAllDay ? 0 : _dueTime!.hour,
+        _isAllDay ? 0 : _dueTime!.minute,
       );
 
-      final tagToSave = (_hasTag && _selectedTag != 'Nenhuma') ? _selectedTag! : '';
-      final tagColorToSave = (_hasTag && _selectedTag != 'Nenhuma') ? _selectedTagColor! : Colors.transparent;
+      final tagToSave = (_hasTag && _selectedTag != 'None') ? _selectedTag! : '';
+      final tagColorToSave = (_hasTag && _selectedTag != 'None') ? _selectedTagColor! : Colors.transparent;
 
       if (widget.task == null) {
-        // Criar nova tarefa
         final newTask = Task(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           title: _titleController.text.trim(),
+          description: _descriptionController.text.trim(),
+          dueDate: dueDateTime,
           tag: tagToSave,
           tagColor: tagColorToSave,
-          dueDate: dueDateTime,
-          isCompleted: _isCompleted,
+          isAllDay: _isAllDay,
+          shouldRepeat: _shouldRepeat,
+          repeatFrequency: _repeatFrequency,
         );
         _controller.addTask(newTask);
       } else {
-        // Atualizar tarefa existente
         final updatedTask = widget.task!.copyWith(
           title: _titleController.text.trim(),
+          description: _descriptionController.text.trim(),
+          dueDate: dueDateTime,
           tag: tagToSave,
           tagColor: tagColorToSave,
-          dueDate: dueDateTime,
           isCompleted: _isCompleted,
+          isAllDay: _isAllDay,
+          shouldRepeat: _shouldRepeat,
+          repeatFrequency: _repeatFrequency,
         );
         _controller.updateTask(updatedTask);
       }
@@ -160,463 +168,368 @@ class _EditTaskPageState extends State<EditTaskPage> {
     }
   }
 
-  Widget _buildCustomSwitch({
-    required bool value,
-    required ValueChanged<bool> onChanged,
-    Color activeColor = const Color(0xFF4CAF50),
-  }) {
-    return GestureDetector(
-      onTap: () => onChanged(!value),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: 52,
-        height: 28,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          color: value ? activeColor : const Color(0xFF4A5568),
-        ),
-        child: AnimatedAlign(
-          duration: const Duration(milliseconds: 200),
-          alignment: value ? Alignment.centerRight : Alignment.centerLeft,
-          child: Container(
-            width: 24,
-            height: 24,
-            margin: const EdgeInsets.all(2),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildToggleButton({
-    required String text,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF4A5568) : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            text,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: isSelected ? Colors.white : const Color(0xFF9CA3AF),
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-              fontSize: 14,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF1A202C),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header com botões de ação
-            Container(
-              padding: const EdgeInsets.all(20),
-              child: Row(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          widget.task == null ? 'New Task' : 'Edit Task',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: _saveTask,
+            child: const Text(
+              'Save',
+              style: TextStyle(
+                color: Color(0xFF48BB78),
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Title Field
+              Text(
+                'Title',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2D3748),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: TextFormField(
+                  controller: _titleController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.all(16),
+                    hintText: 'Enter task title',
+                    hintStyle: TextStyle(color: Colors.grey),
+                  ),
+                  validator: (value) =>
+                      value == null || value.trim().isEmpty
+                          ? 'Please enter a title'
+                          : null,
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Tag Selection
+              Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Botão cancelar
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2D3748),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: const Color(0xFF4A5568),
-                          width: 1,
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.close,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                  
-                  // Título
                   Text(
-                    widget.task == null ? 'Nova tarefa' : 'Editar tarefa',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
+                    'Tag',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 14,
                     ),
                   ),
-                  
-                  // Botão salvar
-                  GestureDetector(
-                    onTap: _saveTask,
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF4CAF50),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Icon(
-                        Icons.check,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
+                  Switch(
+                    value: _hasTag,
+                    onChanged: (value) {
+                      setState(() {
+                        _hasTag = value;
+                        if (!value) {
+                          _selectedTag = 'None';
+                          _selectedTagColor = tags['None'];
+                        }
+                      });
+                    },
+                    activeColor: const Color(0xFF48BB78),
                   ),
                 ],
               ),
-            ),
-
-            // Conteúdo principal
-            Expanded(
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20),
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2D3748),
-                  borderRadius: BorderRadius.circular(16),
+              if (_hasTag) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: tags.entries
+                      .where((entry) => entry.key != 'None')
+                      .map((entry) => ChoiceChip(
+                            label: Text(entry.key),
+                            selected: _selectedTag == entry.key,
+                            onSelected: (selected) {
+                              setState(() {
+                                _selectedTag = selected ? entry.key : 'None';
+                                _selectedTagColor = selected ? entry.value : tags['None'];
+                              });
+                            },
+                            selectedColor: entry.value.withOpacity(0.2),
+                            backgroundColor: const Color(0xFF2D3748),
+                            labelStyle: TextStyle(
+                              color: _selectedTag == entry.key
+                                  ? Colors.white
+                                  : Colors.white.withOpacity(0.7),
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              side: BorderSide(
+                                color: _selectedTag == entry.key
+                                    ? entry.value
+                                    : Colors.transparent,
+                                width: 2,
+                              ),
+                            ),
+                          ))
+                      .toList(),
                 ),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Campo Título
-                      Row(
-                        children: [
-                          const Text(
-                            'Título:',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF4A5568),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: TextFormField(
-                                controller: _titleController,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                ),
-                                decoration: const InputDecoration(
-                                  border: InputBorder.none,
-                                  hintText: 'Nome qualquer',
-                                  hintStyle: TextStyle(
-                                    color: Color(0xFF9CA3AF),
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                validator: (value) =>
-                                    (value == null || value.trim().isEmpty) 
-                                        ? 'Digite o título' : null,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                const SizedBox(height: 16),
+              ],
 
-                      const SizedBox(height: 24),
-
-                      // Etiqueta (Tag)
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Etiqueta:',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          _buildCustomSwitch(
-                            value: _hasTag,
-                            onChanged: (value) {
-                              setState(() {
-                                _hasTag = value;
-                                if (!value) {
-                                  _selectedTag = 'Nenhuma';
-                                  _selectedTagColor = tags['Nenhuma'];
-                                }
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-
-                      if (_hasTag) ...[
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF4A5568),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: _selectedTag == 'Nenhuma' ? null : _selectedTag,
-                              hint: const Text(
-                                'Selecionar etiqueta',
-                                style: TextStyle(
-                                  color: Color(0xFF9CA3AF),
-                                  fontSize: 16,
-                                ),
-                              ),
-                              dropdownColor: const Color(0xFF4A5568),
-                              isExpanded: true,
-                              items: tags.entries
-                                  .where((entry) => entry.key != 'Nenhuma')
-                                  .map((entry) {
-                                return DropdownMenuItem<String>(
-                                  value: entry.key,
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        width: 16,
-                                        height: 16,
-                                        decoration: BoxDecoration(
-                                          color: entry.value,
-                                          borderRadius: BorderRadius.circular(2),
-                                        ),
-                                        margin: const EdgeInsets.only(right: 12),
-                                      ),
-                                      Text(
-                                        entry.key,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }).toList(),
-                              onChanged: (val) {
-                                setState(() {
-                                  _selectedTag = val ?? 'Nenhuma';
-                                  _selectedTagColor = val == null ? null : tags[val];
-                                });
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
-
-                      const SizedBox(height: 24),
-
-                      // Dia inteiro
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Dia inteiro',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          _buildCustomSwitch(
-                            value: _isAllDay,
-                            onChanged: (value) {
-                              setState(() {
-                                _isAllDay = value;
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Repetir
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Repetir',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          _buildCustomSwitch(
-                            value: _shouldRepeat,
-                            onChanged: (value) {
-                              setState(() {
-                                _shouldRepeat = value;
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-
-                      if (_shouldRepeat) ...[
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF4A5568),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            children: [
-                              _buildToggleButton(
-                                text: 'Todos os dias',
-                                isSelected: _repeatFrequency == 'Todos os dias',
-                                onTap: () {
-                                  setState(() {
-                                    _repeatFrequency = 'Todos os dias';
-                                  });
-                                },
-                              ),
-                              _buildToggleButton(
-                                text: 'Todas as semanas',
-                                isSelected: _repeatFrequency == 'Todas as semanas',
-                                onTap: () {
-                                  setState(() {
-                                    _repeatFrequency = 'Todas as semanas';
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-
-                      const SizedBox(height: 24),
-
-                      // Data e Hora
-                      Row(
-                        children: [
-                          // Data
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () => _selectDueDate(context),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 14,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF9AE6B4),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  _dueDate != null 
-                                      ? '${_dueDate!.day.toString().padLeft(2, '0')}/${_dueDate!.month.toString().padLeft(2, '0')}/${_dueDate!.year}'
-                                      : 'Selecionar data',
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    color: Color(0xFF1A202C),
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          
-                          const SizedBox(width: 12),
-                          
-                          // Hora
-                          if (!_isAllDay)
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () => _selectDueTime(context),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 14,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF9AE6B4),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    _dueTime != null 
-                                        ? _dueTime!.format(context)
-                                        : 'Hora',
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      color: Color(0xFF1A202C),
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Campo de detalhes
-                      Container(
-                        width: double.infinity,
-                        height: 120,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF9AE6B4),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const TextField(
-                          maxLines: null,
-                          expands: true,
+              // Date and Time
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Date',
                           style: TextStyle(
-                            color: Color(0xFF1A202C),
-                            fontSize: 16,
+                            color: Colors.white.withOpacity(0.8),
+                            fontSize: 14,
                           ),
-                          decoration: InputDecoration(
-                            border: InputBorder.none,
-                            hintText: 'Detalhes...',
-                            hintStyle: TextStyle(
-                              color: Color(0xFF4A5568),
-                              fontSize: 16,
+                        ),
+                        const SizedBox(height: 8),
+                        GestureDetector(
+                          onTap: () => _selectDueDate(context),
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2D3748),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  _dueDate != null
+                                      ? '${_dueDate!.day}/${_dueDate!.month}/${_dueDate!.year}'
+                                      : 'Select date',
+                                  style: const TextStyle(color: Colors.white),
+                                ),
+                                const Icon(Icons.calendar_today,
+                                    color: Color(0xFF48BB78)),
+                              ],
                             ),
                           ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  if (!_isAllDay)
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Time',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.8),
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          GestureDetector(
+                            onTap: () => _selectDueTime(context),
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF2D3748),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    _dueTime != null
+                                        ? _dueTime!.format(context)
+                                        : 'Select time',
+                                    style: const TextStyle(color: Colors.white),
+                                  ),
+                                  const Icon(Icons.access_time,
+                                      color: Color(0xFF48BB78)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // All day switch
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'All day',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 14,
+                    ),
+                  ),
+                  Switch(
+                    value: _isAllDay,
+                    onChanged: (value) {
+                      setState(() {
+                        _isAllDay = value;
+                      });
+                    },
+                    activeColor: const Color(0xFF48BB78),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Repeat options
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Repeat',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 14,
+                    ),
+                  ),
+                  Switch(
+                    value: _shouldRepeat,
+                    onChanged: (value) {
+                      setState(() {
+                        _shouldRepeat = value;
+                      });
+                    },
+                    activeColor: const Color(0xFF48BB78),
+                  ),
+                ],
+              ),
+              if (_shouldRepeat) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2D3748),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: RadioListTile<String>(
+                          title: const Text('Daily',
+                              style: TextStyle(color: Colors.white)),
+                          value: 'Daily',
+                          groupValue: _repeatFrequency,
+                          onChanged: (value) {
+                            setState(() {
+                              _repeatFrequency = value!;
+                            });
+                          },
+                          activeColor: const Color(0xFF48BB78),
+                        ),
+                      ),
+                      Expanded(
+                        child: RadioListTile<String>(
+                          title: const Text('Weekly',
+                              style: TextStyle(color: Colors.white)),
+                          value: 'Weekly',
+                          groupValue: _repeatFrequency,
+                          onChanged: (value) {
+                            setState(() {
+                              _repeatFrequency = value!;
+                            });
+                          },
+                          activeColor: const Color(0xFF48BB78),
                         ),
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(height: 16),
+              ],
+
+              // Description
+              Text(
+                'Description',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: 14,
+                ),
               ),
-            ),
-            
-            const SizedBox(height: 20),
-          ],
+              const SizedBox(height: 8),
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2D3748),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: TextField(
+                  controller: _descriptionController,
+                  maxLines: 5,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.all(16),
+                    hintText: 'Add description (optional)...',
+                    hintStyle: TextStyle(color: Colors.grey),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Complete task (only shown when editing)
+              if (widget.task != null)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Complete Task',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.8),
+                        fontSize: 14,
+                      ),
+                    ),
+                    Switch(
+                      value: _isCompleted,
+                      onChanged: (value) {
+                        setState(() {
+                          _isCompleted = value;
+                        });
+                      },
+                      activeColor: const Color(0xFF48BB78),
+                    ),
+                  ],
+                ),
+            ],
+          ),
         ),
       ),
     );
