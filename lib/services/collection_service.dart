@@ -17,6 +17,8 @@ class CollectionService {
 
   // Inicializar e carregar dados do Firestore
   Future<void> initialize() async {
+    if (_isLoading) return; // Prevent multiple simultaneous loads
+
     if (!_firestoreService.isUserAuthenticated) {
       _collections = [];
       return;

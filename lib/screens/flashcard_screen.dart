@@ -15,11 +15,18 @@ class FlashcardScreen extends StatefulWidget {
 
 class _FlashcardScreenState extends State<FlashcardScreen> {
   final CollectionService _collectionService = CollectionService();
+  // Add this line after line 16 (after _collectionService declaration):
+  final Map<String, bool> _flippedCards = {};
 
   @override
   void initState() {
     super.initState();
-    //_addSampleData();
+    _loadCollections();
+  }
+
+  Future<void> _loadCollections() async {
+    await _collectionService.initialize();
+    setState(() {});
   }
 
   /*
@@ -119,6 +126,10 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
   @override
   Widget build(BuildContext context) {
     final collections = _collectionService.getAllCollectionsSync();
+    if (collections.isEmpty && !_collectionService.isLoading) {
+      // Show loading indicator or call initialize again
+      _loadCollections();
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A1A), // Fundo escuro como na imagem
@@ -325,9 +336,17 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
   }
 
   Widget _buildFlashcardTile(Flashcard flashcard, Color color) {
+    final cardKey = '${flashcard.question}_${flashcard.answer}';
+    final isFlipped = _flippedCards[cardKey] ?? false;
+
     return GestureDetector(
-      onTap: () => _showFlashcardDetails(flashcard),
-      child: Container(
+      onTap: () {
+        setState(() {
+          _flippedCards[cardKey] = !isFlipped;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
         decoration: BoxDecoration(
           color: color.withOpacity(0.1),
           borderRadius: BorderRadius.circular(12),
@@ -339,67 +358,23 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(8.0),
-            child: Text(
-              flashcard.question,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Colors.white,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: Text(
+                isFlipped ? flashcard.answer : flashcard.question,
+                key: ValueKey(isFlipped),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white,
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  void _showFlashcardDetails(Flashcard flashcard) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF2A2A2A),
-        title: Text(
-          'Flashcard',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Pergunta:',
-              style: TextStyle(
-                color: Colors.white70,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Text(
-              flashcard.question,
-              style: TextStyle(color: Colors.white),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Resposta:',
-              style: TextStyle(
-                color: Colors.white70,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Text(
-              flashcard.answer,
-              style: TextStyle(color: Colors.white),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Fechar'),
-          ),
-        ],
       ),
     );
   }
@@ -448,7 +423,7 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
                     flashcard.answer,
                     style: TextStyle(color: Colors.white70),
                   ),
-                  onTap: () => _showFlashcardDetails(flashcard),
+                  //onTap: () => _showFlashcardDetails(flashcard),
                 ),
               );
             },

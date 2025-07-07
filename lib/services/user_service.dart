@@ -14,10 +14,8 @@ class UserService {
 
   Future<UserModel?> getUserById(String uid) async {
     try {
-      DocumentSnapshot doc = await _firestore
-          .collection('users')
-          .doc(uid)
-          .get();
+      DocumentSnapshot doc =
+          await _firestore.collection('users').doc(uid).get();
 
       if (doc.exists) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
@@ -86,7 +84,8 @@ class UserService {
             id: currentUser.uid,
             name: currentUser.displayName ?? 'Usuário',
             email: currentUser.email ?? '',
-            profileImageUrl: currentUser.photoURL, // Keep this for external URLs
+            profileImageUrl:
+                currentUser.photoURL, // Keep this for external URLs
             createdAt: DateTime.now(),
             lastLoginAt: DateTime.now(),
             studyTimeMinutes: 0,
@@ -243,7 +242,18 @@ class UserService {
       if (currentUser == null || currentUser.uid != userId) {
         throw Exception('Usuário não autenticado');
       }
+// Update Firebase Auth profile
+      if (name != null) {
+        await currentUser.updateDisplayName(name);
+      }
+// Don't update photoURL since we're using profileImageUrl in Firestore
+      await currentUser.reload();
 
+// Update Firebase Auth email if provided
+      if (email != null && email != currentUser.email) {
+        await currentUser.verifyBeforeUpdateEmail(email);
+        await currentUser.reload();
+      }
       UserModel? existingUser = await getUserById(userId);
 
       if (existingUser == null) {

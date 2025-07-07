@@ -9,8 +9,8 @@ import 'package:dsi_projeto/features/schedule/schedule_page.dart';
 import 'package:dsi_projeto/features/schedule/schedule_controller.dart';
 import 'package:dsi_projeto/features/schedule/models/task_model.dart';
 import 'package:dsi_projeto/features/schedule/pages/edit_task_page.dart';
-import 'package:dsi_projeto/features/schedule/widgets/monthly_view.dart';   
-import 'package:dsi_projeto/features/schedule/widgets/weekly_view.dart';  
+import 'package:dsi_projeto/features/schedule/widgets/monthly_view.dart';
+import 'package:dsi_projeto/features/schedule/widgets/weekly_view.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -29,7 +29,7 @@ class MainNavigationScreen extends StatefulWidget {
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
-  int _selectedIndex = 5;
+  int _selectedIndex = 0;
 
   // Instância singleton do controller
   static final ScheduleController _controller = ScheduleController.instance;
@@ -245,7 +245,8 @@ class SchedulePage extends StatefulWidget {
   State<SchedulePage> createState() => _SchedulePageState();
 }
 
-class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderStateMixin {
+class _SchedulePageState extends State<SchedulePage>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   ScheduleController get _controller => widget.controller;
