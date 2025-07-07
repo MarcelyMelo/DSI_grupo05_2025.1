@@ -1,3 +1,4 @@
+import 'package:dsi_projeto/components/colors/appColors.dart';
 import 'package:flutter/material.dart';
 import '../models/collection.dart';
 import '../models/flashcard.dart';
@@ -15,7 +16,6 @@ class FlashcardScreen extends StatefulWidget {
 
 class _FlashcardScreenState extends State<FlashcardScreen> {
   final CollectionService _collectionService = CollectionService();
-  // Add this line after line 16 (after _collectionService declaration):
   final Map<String, bool> _flippedCards = {};
 
   @override
@@ -29,43 +29,6 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
     setState(() {});
   }
 
-  /*
-  void _addSampleData() {
-    _collectionService.addCollection(
-      Collection(
-        name: 'Matemática',
-        flashcards: [
-          Flashcard(question: '2 + 2', answer: '4'),
-          Flashcard(question: '5 × 3', answer: '15'),
-          Flashcard(question: '10 ÷ 2', answer: '5'),
-          Flashcard(question: '7 + 8', answer: '15'),
-        ],
-      ),
-    );
-    
-    _collectionService.addCollection(
-      Collection(
-        name: 'Geografia',
-        flashcards: [
-          Flashcard(question: 'Capital do Brasil', answer: 'Brasília'),
-          Flashcard(question: 'Maior país da América do Sul', answer: 'Brasil'),
-          Flashcard(question: 'Capital da França', answer: 'Paris'),
-        ],
-      ),
-    );
-
-    _collectionService.addCollection(
-      Collection(
-        name: 'Inglês',
-        flashcards: [
-          Flashcard(question: 'Hello em português', answer: 'Olá'),
-          Flashcard(question: 'Book em português', answer: 'Livro'),
-          Flashcard(question: 'Water em português', answer: 'Água'),
-        ],
-      ),
-    );
-  }*/
-
   void _navigateToEditCollection(Collection collection) {
     Navigator.push(
       context,
@@ -76,7 +39,6 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
         ),
       ),
     ).then((hasChanges) {
-      // Atualiza a tela se houve mudanças
       if (hasChanges == true) {
         setState(() {});
       }
@@ -87,7 +49,7 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF2A2A2A),
+        backgroundColor: AppColors.backgroundLogin,
         title: const Text(
           'Excluir Coleção',
           style: TextStyle(color: Colors.white),
@@ -127,19 +89,18 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
   Widget build(BuildContext context) {
     final collections = _collectionService.getAllCollectionsSync();
     if (collections.isEmpty && !_collectionService.isLoading) {
-      // Show loading indicator or call initialize again
       _loadCollections();
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A), // Fundo escuro como na imagem
+      backgroundColor: AppColors.backgroundLogin,
       appBar: AppBar(
         title: const Text(
           'Flashcards',
           style: TextStyle(
             color: Colors.white,
             fontSize: 24,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w500,
           ),
         ),
         centerTitle: true,
@@ -154,44 +115,292 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Botões de criação - Layout similar à imagem
-            Row(
-              children: [
-                Expanded(
-                  child: _buildCreateButton(
-                    'Criar\nFlashcard',
-                    Icons.add,
-                    const Color(0xFF2A5F4F), // Verde escuro
-                    () => _navigateToCreateFlashcard(context),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildCreateButton(
-                    'Criar\nColeção',
-                    Icons.add,
-                    const Color(0xFF2A5F4F), // Verde escuro
-                    () => _navigateToCreateCollection(context),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
+      body: collections.isEmpty
+          ? _buildEmptyState()
+          : _buildCollectionsList(collections),
+    );
+  }
 
-            // Lista de coleções
-            Expanded(
-              child: ListView.separated(
-                itemCount: collections.length,
-                separatorBuilder: (context, index) =>
-                    const SizedBox(height: 24),
-                itemBuilder: (context, index) {
-                  return _buildCollectionSection(collections[index]);
-                },
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Botões de criação - Layout minimalista
+          Row(
+            children: [
+              Expanded(
+                child: _buildCreateButton(
+                  'Criar\nFlashcard',
+                  Icons.add,
+                  AppColors.blue,
+                  () => _navigateToCreateFlashcard(context),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildCreateButton(
+                  'Criar\nColeção',
+                  Icons.add,
+                  AppColors.blue,
+                  () => _navigateToCreateCollection(context),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 80),
+          Text(
+            'Nenhuma coleção criada ainda',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.6),
+              fontSize: 16,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCollectionsList(List<Collection> collections) {
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Botões de criação no topo
+          Row(
+            children: [
+              Expanded(
+                child: _buildCreateButton(
+                  'Criar\nFlashcard',
+                  Icons.add,
+                  AppColors.blue,
+                  () => _navigateToCreateFlashcard(context),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildCreateButton(
+                  'Criar\nColeção',
+                  Icons.add,
+                  AppColors.blue,
+                  () => _navigateToCreateCollection(context),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 40),
+
+          // Lista de coleções com design minimalista
+          Expanded(
+            child: ListView.separated(
+              itemCount: collections.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 20),
+              itemBuilder: (context, index) {
+                return _buildCollectionCard(collections[index]);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCreateButton(
+      String text, IconData icon, Color color, VoidCallback onPressed) {
+    return Container(
+      height: 120,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 32,
+                color: Colors.white,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                text,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCollectionCard(Collection collection) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundLogin,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header da coleção
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  collection.name,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              Row(
+                children: [
+                  IconButton(
+                    icon:
+                        const Icon(Icons.edit_outlined, color: Colors.white70),
+                    onPressed: () => _navigateToEditCollection(collection),
+                    constraints:
+                        const BoxConstraints(minWidth: 40, minHeight: 40),
+                  ),
+                  IconButton(
+                    icon:
+                        const Icon(Icons.delete_outline, color: Colors.white70),
+                    onPressed: () => _deleteCollection(collection),
+                    constraints:
+                        const BoxConstraints(minWidth: 40, minHeight: 40),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${collection.flashcards.length} flashcards',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.white.withOpacity(0.6),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Preview dos flashcards
+          if (collection.flashcards.isNotEmpty) ...[
+            _buildFlashcardPreview(collection.flashcards.first),
+            const SizedBox(height: 12),
+            GestureDetector(
+              onTap: () => _viewCollection(collection),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'Ver todos os flashcards',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          ] else ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.1),
+                  style: BorderStyle.solid,
+                ),
+              ),
+              child: Text(
+                'Nenhum flashcard ainda',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.5),
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFlashcardPreview(Flashcard flashcard) {
+    final cardKey = '${flashcard.question}_${flashcard.answer}';
+    final isFlipped = _flippedCards[cardKey] ?? false;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _flippedCards[cardKey] = !isFlipped;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.blue,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.1),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isFlipped ? 'Resposta:' : 'Pergunta:',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.white.withOpacity(0.6),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: Text(
+                isFlipped ? flashcard.answer : flashcard.question,
+                key: ValueKey(isFlipped),
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Toque para ${isFlipped ? 'ver pergunta' : 'ver resposta'}',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.white.withOpacity(0.4),
               ),
             ),
           ],
@@ -209,174 +418,8 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
         ),
       ),
     ).then((_) {
-      // Atualiza a tela quando voltar da criação
       setState(() {});
     });
-  }
-
-  Widget _buildCreateButton(
-      String text, IconData icon, Color color, VoidCallback onPressed) {
-    return Container(
-      height: 100,
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(12),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 32,
-                color: Colors.white,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                text,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCollectionSection(Collection collection) {
-    // Cores diferentes para cada coleção
-    final colors = [
-      const Color(0xFF4A90E2), // Azul
-      const Color(0xFF7ED321), // Verde
-      const Color(0xFFBD10E0), // Roxo
-      const Color(0xFFF5A623), // Laranja
-      const Color(0xFFD0021B), // Vermelho
-    ];
-
-    final colorIndex = collection.name.hashCode % colors.length;
-    final collectionColor = colors[colorIndex.abs()];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Header da coleção
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: collectionColor,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                collection.name,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: () => _navigateToEditCollection(collection),
-                child: const Icon(
-                  Icons.edit,
-                  size: 16,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(width: 4),
-              GestureDetector(
-                onTap: () => _deleteCollection(collection),
-                child: const Icon(
-                  Icons.close,
-                  size: 16,
-                  color: Colors.white,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        // Grid de flashcards (similar à imagem)
-        _buildFlashcardsGrid(collection.flashcards, collectionColor),
-      ],
-    );
-  }
-
-  Widget _buildFlashcardsGrid(List<Flashcard> flashcards, Color color) {
-    // Mostra no máximo 6 flashcards por coleção
-    final displayCards = flashcards.take(6).toList();
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        childAspectRatio: 1.0,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
-      ),
-      itemCount: displayCards.length,
-      itemBuilder: (context, index) {
-        return _buildFlashcardTile(displayCards[index], color);
-      },
-    );
-  }
-
-  Widget _buildFlashcardTile(Flashcard flashcard, Color color) {
-    final cardKey = '${flashcard.question}_${flashcard.answer}';
-    final isFlipped = _flippedCards[cardKey] ?? false;
-
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _flippedCards[cardKey] = !isFlipped;
-        });
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: color.withOpacity(0.3),
-            width: 1,
-          ),
-        ),
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              child: Text(
-                isFlipped ? flashcard.answer : flashcard.question,
-                key: ValueKey(isFlipped),
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white,
-                ),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
   }
 
   void _navigateToCreateFlashcard(BuildContext context) {
@@ -401,29 +444,68 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
           appBar: AppBar(
             title: Text(
               collection.name,
-              style: TextStyle(color: Colors.white),
+              style: const TextStyle(color: Colors.white),
             ),
             backgroundColor: const Color(0xFF1A1A1A),
-            iconTheme: IconThemeData(color: Colors.white),
+            iconTheme: const IconThemeData(color: Colors.white),
+            elevation: 0,
           ),
-          body: ListView.builder(
-            padding: const EdgeInsets.all(16),
+          body: ListView.separated(
+            padding: const EdgeInsets.all(24),
             itemCount: collection.flashcards.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 16),
             itemBuilder: (context, index) {
               final flashcard = collection.flashcards[index];
-              return Card(
-                color: const Color(0xFF2A2A2A),
-                margin: const EdgeInsets.only(bottom: 12),
-                child: ListTile(
-                  title: Text(
-                    flashcard.question,
-                    style: TextStyle(color: Colors.white),
+              final cardKey =
+                  '${flashcard.question}_${flashcard.answer}_$index';
+              final isFlipped = _flippedCards[cardKey] ?? false;
+
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _flippedCards[cardKey] = !isFlipped;
+                  });
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2A2A2A),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  subtitle: Text(
-                    flashcard.answer,
-                    style: TextStyle(color: Colors.white70),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isFlipped ? 'Resposta:' : 'Pergunta:',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white.withOpacity(0.6),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        child: Text(
+                          isFlipped ? flashcard.answer : flashcard.question,
+                          key: ValueKey(isFlipped),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Toque para ${isFlipped ? 'ver pergunta' : 'ver resposta'}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white.withOpacity(0.4),
+                        ),
+                      ),
+                    ],
                   ),
-                  //onTap: () => _showFlashcardDetails(flashcard),
                 ),
               );
             },
