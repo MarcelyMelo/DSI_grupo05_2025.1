@@ -17,6 +17,7 @@ class _MapScreenState extends State<MapScreen> {
   LatLng? currentPosition;
   bool isLoading = true;
   String errorMessage = '';
+  String noResultsMessage = '';
   List<LatLng> nearbyPlaces = [];
   String selectedPlaceType = 'cafe';
   double searchRadius = 1000;
@@ -45,6 +46,7 @@ class _MapScreenState extends State<MapScreen> {
       
       setState(() {
         currentPosition = LatLng(position.latitude, position.longitude);
+        errorMessage = ''; // Limpa erro ao obter localização
       });
       
       await _findNearbyPlaces(position.latitude, position.longitude);
@@ -64,7 +66,7 @@ class _MapScreenState extends State<MapScreen> {
       setState(() {
         isLoading = true;
         nearbyPlaces = [];
-        errorMessage = '';
+        noResultsMessage = '';
       });
 
       final amenities = {
@@ -95,7 +97,7 @@ class _MapScreenState extends State<MapScreen> {
         
         if (elements.isEmpty) {
           setState(() {
-            errorMessage = 'Nenhum local encontrado neste raio';
+            noResultsMessage = 'Nenhuma ${selectedPlaceType == 'cafe' ? 'cafeteria' : 'livraria'} encontrada neste raio';
             isLoading = false;
           });
           return;
@@ -122,13 +124,13 @@ class _MapScreenState extends State<MapScreen> {
         });
       } else {
         setState(() {
-          errorMessage = 'Erro na API: ${response.statusCode}';
+          noResultsMessage = 'Erro na API: ${response.statusCode}';
           isLoading = false;
         });
       }
     } catch (e) {
       setState(() {
-        errorMessage = 'Erro ao buscar locais: $e';
+        noResultsMessage = 'Erro ao buscar locais: $e';
         isLoading = false;
       });
     }
@@ -216,63 +218,146 @@ class _MapScreenState extends State<MapScreen> {
                 decoration: const BoxDecoration(
                   color: Color(0xFF0C1C22),
                 ),
-                child: isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
-                    : errorMessage.isNotEmpty
-                        ? Center(
-                            child: Text(
+                child: errorMessage.isNotEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.location_off,
+                              color: Colors.white,
+                              size: 48,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
                               errorMessage,
                               style: const TextStyle(color: Colors.white),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: _getCurrentLocation,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: const Color(0xFF0C1C22),
+                              ),
+                              child: const Text('Tentar Novamente'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : currentPosition == null
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           )
-                        : ClipRRect(
-                            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                            child: FlutterMap(
-                              options: MapOptions(
-                                initialCenter: currentPosition!,
-                                initialZoom: 15.0,
-                              ),
-                              children: [
-                                TileLayer(
-                                  urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                  subdomains: const ['a', 'b', 'c'],
-                                ),
-                                MarkerLayer(
-                                  markers: [
-                                    Marker(
-                                      width: 40.0,
-                                      height: 40.0,
-                                      point: currentPosition!,
-                                      child: const Icon(
-                                        Icons.person_pin_circle,
-                                        color: Colors.blue,
-                                        size: 40,
-                                      ),
+                        : Stack(
+                            children: [
+                              ClipRRect(
+                                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                                child: FlutterMap(
+                                  options: MapOptions(
+                                    initialCenter: currentPosition!,
+                                    initialZoom: 15.0,
+                                  ),
+                                  children: [
+                                    TileLayer(
+                                      urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                      subdomains: const ['a', 'b', 'c'],
+                                    ),
+                                    MarkerLayer(
+                                      markers: [
+                                        Marker(
+                                          width: 40.0,
+                                          height: 40.0,
+                                          point: currentPosition!,
+                                          child: const Icon(
+                                            Icons.person_pin_circle,
+                                            color: Colors.blue,
+                                            size: 40,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    MarkerLayer(
+                                      markers: nearbyPlaces.map((place) => Marker(
+                                        width: 30.0,
+                                        height: 30.0,
+                                        point: place,
+                                        child: Icon(
+                                          selectedPlaceType == 'cafe'
+                                            ? Icons.local_cafe
+                                            : Icons.menu_book,
+                                          color: selectedPlaceType == 'cafe'
+                                            ? Colors.brown
+                                            : Colors.indigo,
+                                          size: 30,
+                                        ),
+                                      )).toList(),
                                     ),
                                   ],
                                 ),
-                                MarkerLayer(
-                                  markers: nearbyPlaces.map((place) => Marker(
-                                    width: 30.0,
-                                    height: 30.0,
-                                    point: place,
-                                    child: Icon(
-                                      selectedPlaceType == 'cafe'
-                                        ? Icons.local_cafe
-                                        : Icons.menu_book,
-                                      color: selectedPlaceType == 'cafe'
-                                        ? Colors.brown
-                                        : Colors.indigo,
-                                      size: 30,
+                              ),
+                              // Overlay para loading
+                              if (isLoading)
+                                Container(
+                                  color: Colors.black.withOpacity(0.3),
+                                  child: const Center(
+                                    child: CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                     ),
-                                  )).toList(),
+                                  ),
                                 ),
-                              ],
-                            ),
+                              // Overlay para mensagem de nenhum resultado
+                              if (noResultsMessage.isNotEmpty && !isLoading)
+                                Positioned(
+                                  top: 20,
+                                  left: 20,
+                                  right: 20,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.8),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: Colors.orange, width: 1),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.info_outline,
+                                          color: Colors.orange,
+                                          size: 20,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            noResultsMessage,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ),
+                                        IconButton(
+                                          onPressed: () {
+                                            setState(() {
+                                              noResultsMessage = '';
+                                            });
+                                          },
+                                          icon: const Icon(
+                                            Icons.close,
+                                            color: Colors.white,
+                                            size: 18,
+                                          ),
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
               ),
             ),
