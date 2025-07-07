@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/task_model.dart';
 import '../schedule_controller.dart';
 import '../pages/edit_task_page.dart';
+import 'monthly_view.dart';
 
 class WeeklyView extends StatefulWidget {
   final ScheduleController controller;
@@ -14,6 +15,7 @@ class WeeklyView extends StatefulWidget {
 
 class _WeeklyViewState extends State<WeeklyView> {
   int selectedDayIndex = DateTime.now().weekday - 1;
+  bool isWeeklyView = true; // Controla a visualização
   final List<String> weekDays = const ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
   List<Task> get tasksForSelectedDay {
@@ -34,7 +36,7 @@ class _WeeklyViewState extends State<WeeklyView> {
       backgroundColor: const Color(0xFFF8F9FA),
       body: Column(
         children: [
-          // Header com título
+          // Header com título e tabs
           Container(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
             decoration: const BoxDecoration(
@@ -64,7 +66,7 @@ class _WeeklyViewState extends State<WeeklyView> {
                 ),
                 const SizedBox(height: 20),
                 
-                // Tabs Semanal/Mensal
+                // Tabs Semanal/Mensal (design roxo aplicado)
                 Container(
                   decoration: BoxDecoration(
                     color: const Color(0xFFF1F3F4),
@@ -73,40 +75,57 @@ class _WeeklyViewState extends State<WeeklyView> {
                   child: Row(
                     children: [
                       Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF6C5CE7),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF6C5CE7).withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
+                        child: GestureDetector(
+                          onTap: () => setState(() => isWeeklyView = true),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: isWeeklyView ? const Color(0xFF6C5CE7) : Colors.transparent,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: isWeeklyView ? [
+                                BoxShadow(
+                                  color: const Color(0xFF6C5CE7).withOpacity(0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ] : null,
+                            ),
+                            child: Text(
+                              'Semanal',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: isWeeklyView ? Colors.white : const Color(0xFF6B7280),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 16,
                               ),
-                            ],
-                          ),
-                          child: const Text(
-                            'Semanal',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
                             ),
                           ),
                         ),
                       ),
                       Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          child: const Text(
-                            'Mensal',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Color(0xFF6B7280),
-                              fontWeight: FontWeight.w500,
-                              fontSize: 16,
+                        child: GestureDetector(
+                          onTap: () => setState(() => isWeeklyView = false),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: !isWeeklyView ? const Color(0xFF6C5CE7) : Colors.transparent,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: !isWeeklyView ? [
+                                BoxShadow(
+                                  color: const Color(0xFF6C5CE7).withOpacity(0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ] : null,
+                            ),
+                            child: Text(
+                              'Mensal',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: !isWeeklyView ? Colors.white : const Color(0xFF6B7280),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 16,
+                              ),
                             ),
                           ),
                         ),
@@ -117,140 +136,53 @@ class _WeeklyViewState extends State<WeeklyView> {
                 
                 const SizedBox(height: 20),
                 
-                // Seletor de dias da semana
-                SizedBox(
-                  height: 50,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: weekDays.length,
-                    itemBuilder: (context, index) {
-                      bool isSelected = index == selectedDayIndex;
-                      return GestureDetector(
-                        onTap: () => setState(() => selectedDayIndex = index),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                          margin: const EdgeInsets.only(right: 8),
-                          decoration: BoxDecoration(
-                            color: isSelected ? const Color(0xFF2196F3) : const Color(0xFFF1F3F4),
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: isSelected ? [
-                              BoxShadow(
-                                color: const Color(0xFF2196F3).withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              )
-                            ] : null,
-                          ),
-                          child: Text(
-                            weekDays[index],
-                            style: TextStyle(
-                              color: isSelected ? Colors.white : const Color(0xFF6B7280),
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
+                // Seletor de dias da semana (só aparece na visualização semanal)
+                if (isWeeklyView)
+                  SizedBox(
+                    height: 50,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: weekDays.length,
+                      itemBuilder: (context, index) {
+                        bool isSelected = index == selectedDayIndex;
+                        return GestureDetector(
+                          onTap: () => setState(() => selectedDayIndex = index),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                            margin: const EdgeInsets.only(right: 8),
+                            decoration: BoxDecoration(
+                              color: isSelected ? const Color(0xFF2196F3) : const Color(0xFFF1F3F4),
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: isSelected ? [
+                                BoxShadow(
+                                  color: const Color(0xFF2196F3).withOpacity(0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ] : null,
+                            ),
+                            child: Text(
+                              weekDays[index],
+                              style: TextStyle(
+                                color: isSelected ? Colors.white : const Color(0xFF6B7280),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 16,
+                              ),
                             ),
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
-                ),
               ],
             ),
           ),
 
           // Conteúdo principal
           Expanded(
-            child: tasksForSelectedDay.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.event_note_outlined,
-                          size: 80,
-                          color: Colors.grey[300],
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Nenhuma tarefa para este dia',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Color(0xFF9CA3AF),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : SingleChildScrollView(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Header da seção
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF34D399),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: const Text(
-                                  'SEMANA',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                _getSelectedDayName(),
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF1A1D29),
-                                ),
-                              ),
-                              const Spacer(),
-                              IconButton(
-                                onPressed: () {},
-                                icon: const Icon(
-                                  Icons.chevron_left,
-                                  color: Color(0xFF6B7280),
-                                ),
-                              ),
-                              IconButton(
-                                onPressed: () {},
-                                icon: const Icon(
-                                  Icons.chevron_right,
-                                  color: Color(0xFF6B7280),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        
-                        const SizedBox(height: 20),
-                        
-                        // Lista de tarefas
-                        ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: tasksForSelectedDay.length,
-                          itemBuilder: (context, index) {
-                            final task = tasksForSelectedDay[index];
-                            return _buildTaskCard(task);
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
+            child: isWeeklyView 
+              ? _buildWeeklyView()
+              : MonthlyView(controller: widget.controller),
           ),
         ],
       ),
@@ -286,6 +218,100 @@ class _WeeklyViewState extends State<WeeklyView> {
         ),
       ),
     );
+  }
+
+  Widget _buildWeeklyView() {
+    return tasksForSelectedDay.isEmpty
+        ? Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.event_note_outlined,
+                  size: 80,
+                  color: Colors.grey[300],
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Nenhuma tarefa para este dia',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Color(0xFF9CA3AF),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          )
+        : SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header da seção
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF34D399),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Text(
+                          'SEMANA',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        _getSelectedDayName(),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1A1D29),
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        onPressed: () {},
+                        icon: const Icon(
+                          Icons.chevron_left,
+                          color: Color(0xFF6B7280),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () {},
+                        icon: const Icon(
+                          Icons.chevron_right,
+                          color: Color(0xFF6B7280),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 20),
+                
+                // Lista de tarefas
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: tasksForSelectedDay.length,
+                  itemBuilder: (context, index) {
+                    final task = tasksForSelectedDay[index];
+                    return _buildTaskCard(task);
+                  },
+                ),
+              ],
+            ),
+          );
   }
 
   Widget _buildTaskCard(Task task) {

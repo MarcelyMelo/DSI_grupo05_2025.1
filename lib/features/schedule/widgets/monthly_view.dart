@@ -252,7 +252,7 @@ class _MonthlyViewState extends State<MonthlyView> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
-                          'Adicionar tarefa',
+                          'Tarefas do Dia',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 18,
@@ -270,7 +270,7 @@ class _MonthlyViewState extends State<MonthlyView> {
                                 showTaskModal = false;
                               });
                             },
-                            icon: const Icon(Icons.add, color: Color(0xFF2C3E50)),
+                            icon: const Icon(Icons.close, color: Color(0xFF2C3E50)),
                           ),
                         ),
                       ],
@@ -287,54 +287,6 @@ class _MonthlyViewState extends State<MonthlyView> {
                     ),
                     child: Column(
                       children: [
-                        // Tabs MÊS/SEMANA
-                        Container(
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF1F3F4),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF34D399),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: const Text(
-                                    'MÊS',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
-                                  child: const Text(
-                                    'SEMANA',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: Color(0xFF9CA3AF),
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 12,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        
-                        const SizedBox(height: 20),
-                        
                         // Data selecionada
                         Text(
                           _getSelectedDateString(),

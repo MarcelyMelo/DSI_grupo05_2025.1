@@ -265,16 +265,6 @@ class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Agenda'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'Semanal'),
-            Tab(text: 'Mensal'),
-          ],
-        ),
-      ),
       body: TabBarView(
         controller: _tabController,
         children: [
