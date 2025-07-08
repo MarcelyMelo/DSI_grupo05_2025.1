@@ -46,7 +46,7 @@ class _MapScreenState extends State<MapScreen> {
       
       setState(() {
         currentPosition = LatLng(position.latitude, position.longitude);
-        errorMessage = ''; // Limpa erro ao obter localização
+        errorMessage = '';
       });
       
       await _findNearbyPlaces(position.latitude, position.longitude);
@@ -156,107 +156,192 @@ class _MapScreenState extends State<MapScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0C1C22),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0C1C22),
-        elevation: 0,
-        toolbarHeight: 0,
-      ),
-      body: Container(
-        color: const Color(0xFF0C1C22),
+      backgroundColor: const Color(0xFF2C3E50),
+      body: SafeArea(
         child: Column(
           children: [
+            // Header
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              alignment: Alignment.center,
-              color: const Color(0xFF0C1C22),
-              child: const Text(
-                'Encontre locais de estudo perto de você',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-            Container(
-              color: const Color(0xFF0C1C22),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  Text(
-                    'Raio de busca: ${(searchRadius/1000).toStringAsFixed(1)} km',
-                    style: const TextStyle(color: Colors.white),
+                  const Text(
+                    'Mapa',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
-                  Slider(
-                    value: searchRadius,
-                    min: 500,
-                    max: 5000,
-                    divisions: 9,
-                    label: '${(searchRadius/1000).toStringAsFixed(1)} km',
-                    activeColor: Colors.white,
-                    inactiveColor: Colors.grey[600],
-                    onChanged: (value) {
-                      setState(() {
-                        searchRadius = value;
-                      });
-                    },
-                    onChangeEnd: (value) {
-                      if (currentPosition != null) {
-                        _findNearbyPlaces(
-                          currentPosition!.latitude, 
-                          currentPosition!.longitude
-                        );
-                      }
-                    },
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Encontre locais de estudo perto de você',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Color(0xFFB0BEC5),
+                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
             ),
+            
+            // Search radius card
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFF34495E),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.radar,
+                        color: Color(0xFF3498DB),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Raio de busca: ${(searchRadius/1000).toStringAsFixed(1)} km',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      activeTrackColor: const Color(0xFF3498DB),
+                      inactiveTrackColor: const Color(0xFF2C3E50),
+                      thumbColor: const Color(0xFF3498DB),
+                      overlayColor: const Color(0xFF3498DB).withOpacity(0.2),
+                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+                      trackHeight: 4,
+                    ),
+                    child: Slider(
+                      value: searchRadius,
+                      min: 500,
+                      max: 5000,
+                      divisions: 9,
+                      onChanged: (value) {
+                        setState(() {
+                          searchRadius = value;
+                        });
+                      },
+                      onChangeEnd: (value) {
+                        if (currentPosition != null) {
+                          _findNearbyPlaces(
+                            currentPosition!.latitude, 
+                            currentPosition!.longitude
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Map container
             Expanded(
               child: Container(
-                decoration: const BoxDecoration(
-                  color: Color(0xFF0C1C22),
+                margin: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 15,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
-                child: errorMessage.isNotEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.location_off,
-                              color: Colors.white,
-                              size: 48,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: errorMessage.isNotEmpty
+                      ? Container(
+                          color: const Color(0xFF34495E),
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF2C3E50),
+                                    borderRadius: BorderRadius.circular(50),
+                                  ),
+                                  child: const Icon(
+                                    Icons.location_off,
+                                    color: Color(0xFFE74C3C),
+                                    size: 48,
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                Text(
+                                  errorMessage,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 20),
+                                ElevatedButton(
+                                  onPressed: _getCurrentLocation,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF3498DB),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: const Text('Tentar Novamente'),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 16),
-                            Text(
-                              errorMessage,
-                              style: const TextStyle(color: Colors.white),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: _getCurrentLocation,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                foregroundColor: const Color(0xFF0C1C22),
+                          ),
+                        )
+                      : currentPosition == null
+                          ? Container(
+                              color: const Color(0xFF34495E),
+                              child: const Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF3498DB)),
+                                      strokeWidth: 3,
+                                    ),
+                                    SizedBox(height: 16),
+                                    Text(
+                                      'Obtendo localização...',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                              child: const Text('Tentar Novamente'),
-                            ),
-                          ],
-                        ),
-                      )
-                    : currentPosition == null
-                        ? const Center(
-                            child: CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
-                        : Stack(
-                            children: [
-                              ClipRRect(
-                                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                                child: FlutterMap(
+                            )
+                          : Stack(
+                              children: [
+                                FlutterMap(
                                   options: MapOptions(
                                     initialCenter: currentPosition!,
                                     initialZoom: 15.0,
@@ -269,172 +354,283 @@ class _MapScreenState extends State<MapScreen> {
                                     MarkerLayer(
                                       markers: [
                                         Marker(
-                                          width: 40.0,
-                                          height: 40.0,
+                                          width: 50.0,
+                                          height: 50.0,
                                           point: currentPosition!,
-                                          child: const Icon(
-                                            Icons.person_pin_circle,
-                                            color: Colors.blue,
-                                            size: 40,
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF3498DB),
+                                              borderRadius: BorderRadius.circular(25),
+                                              border: Border.all(color: Colors.white, width: 3),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black.withOpacity(0.3),
+                                                  blurRadius: 8,
+                                                  offset: const Offset(0, 4),
+                                                ),
+                                              ],
+                                            ),
+                                            child: const Icon(
+                                              Icons.person,
+                                              color: Colors.white,
+                                              size: 24,
+                                            ),
                                           ),
                                         ),
                                       ],
                                     ),
                                     MarkerLayer(
                                       markers: nearbyPlaces.map((place) => Marker(
-                                        width: 30.0,
-                                        height: 30.0,
+                                        width: 40.0,
+                                        height: 40.0,
                                         point: place,
-                                        child: Icon(
-                                          selectedPlaceType == 'cafe'
-                                            ? Icons.local_cafe
-                                            : Icons.menu_book,
-                                          color: selectedPlaceType == 'cafe'
-                                            ? Colors.brown
-                                            : Colors.indigo,
-                                          size: 30,
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            color: selectedPlaceType == 'cafe'
+                                                ? const Color(0xFF8B4513)
+                                                : const Color(0xFF6A1B9A),
+                                            borderRadius: BorderRadius.circular(20),
+                                            border: Border.all(color: Colors.white, width: 2),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black.withOpacity(0.3),
+                                                blurRadius: 6,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Icon(
+                                            selectedPlaceType == 'cafe'
+                                                ? Icons.local_cafe
+                                                : Icons.menu_book,
+                                            color: Colors.white,
+                                            size: 20,
+                                          ),
                                         ),
                                       )).toList(),
                                     ),
                                   ],
                                 ),
-                              ),
-                              // Overlay para loading
-                              if (isLoading)
-                                Container(
-                                  color: Colors.black.withOpacity(0.3),
-                                  child: const Center(
-                                    child: CircularProgressIndicator(
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                    ),
-                                  ),
-                                ),
-                              // Overlay para mensagem de nenhum resultado
-                              if (noResultsMessage.isNotEmpty && !isLoading)
-                                Positioned(
-                                  top: 20,
-                                  left: 20,
-                                  right: 20,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(16),
-                                    decoration: BoxDecoration(
-                                      color: Colors.black.withOpacity(0.8),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: Colors.orange, width: 1),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.info_outline,
-                                          color: Colors.orange,
-                                          size: 20,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            noResultsMessage,
-                                            style: const TextStyle(
+                                // Loading overlay
+                                if (isLoading)
+                                  Container(
+                                    color: Colors.black.withOpacity(0.5),
+                                    child: const Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          CircularProgressIndicator(
+                                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF3498DB)),
+                                            strokeWidth: 3,
+                                          ),
+                                          SizedBox(height: 16),
+                                          Text(
+                                            'Buscando locais...',
+                                            style: TextStyle(
                                               color: Colors.white,
-                                              fontSize: 14,
+                                              fontSize: 16,
                                             ),
                                           ),
-                                        ),
-                                        IconButton(
-                                          onPressed: () {
-                                            setState(() {
-                                              noResultsMessage = '';
-                                            });
-                                          },
-                                          icon: const Icon(
-                                            Icons.close,
-                                            color: Colors.white,
-                                            size: 18,
-                                          ),
-                                          padding: EdgeInsets.zero,
-                                          constraints: const BoxConstraints(),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
                                   ),
-                                ),
-                            ],
-                          ),
+                                // No results message
+                                if (noResultsMessage.isNotEmpty && !isLoading)
+                                  Positioned(
+                                    top: 20,
+                                    left: 20,
+                                    right: 20,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF34495E),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: const Color(0xFFF39C12), width: 2),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.2),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.info_outline,
+                                            color: Color(0xFFF39C12),
+                                            size: 20,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Text(
+                                              noResultsMessage,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                          GestureDetector(
+                                            onTap: () {
+                                              setState(() {
+                                                noResultsMessage = '';
+                                              });
+                                            },
+                                            child: Container(
+                                              padding: const EdgeInsets.all(4),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withOpacity(0.1),
+                                                borderRadius: BorderRadius.circular(4),
+                                              ),
+                                              child: const Icon(
+                                                Icons.close,
+                                                color: Colors.white,
+                                                size: 16,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                ),
               ),
             ),
+
+            // Filter options
             Container(
-              color: const Color(0xFF0C1C22),
-              padding: const EdgeInsets.all(10),
+              margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFF34495E),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
               child: Column(
                 children: [
-                  ElevatedButton(
-                    onPressed: _toggleFilterOptions,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0C1C22),
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        side: const BorderSide(color: Color(0x4DFFFFFF)),
-                      ),
-                    ),
+                  GestureDetector(
+                    onTap: _toggleFilterOptions,
                     child: Row(
-                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.filter_alt, color: Colors.white),
-                        const SizedBox(width: 8),
-                        Text(
-                          selectedPlaceType == 'cafe' ? 'Cafeterias' : 'Livrarias',
-                          style: const TextStyle(color: Colors.white),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF3498DB),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.filter_alt,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            selectedPlaceType == 'cafe' ? 'Cafeterias' : 'Livrarias',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
                         Icon(
-                          showFilterOptions ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+                          showFilterOptions ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                           color: Colors.white,
+                          size: 24,
                         ),
                       ],
                     ),
                   ),
                   if (showFilterOptions) ...[
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 16),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _buildFilterOption('cafe', 'Cafeterias', Colors.brown),
-                        const SizedBox(width: 20),
-                        _buildFilterOption('bookstore', 'Livrarias', Colors.indigo),
+                        Expanded(
+                          child: _buildFilterOption('cafe', 'Cafeterias', const Color(0xFF8B4513), Icons.local_cafe),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildFilterOption('bookstore', 'Livrarias', const Color(0xFF6A1B9A), Icons.menu_book),
+                        ),
                       ],
                     ),
                   ],
                 ],
               ),
             ),
+            
+            const SizedBox(height: 20),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _getCurrentLocation,
-        backgroundColor: const Color(0xFF0C1C22),
-        child: const Icon(Icons.refresh, color: Colors.white),
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: FloatingActionButton(
+          onPressed: _getCurrentLocation,
+          backgroundColor: const Color(0xFF3498DB),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: const Icon(Icons.my_location, color: Colors.white),
+        ),
       ),
     );
   }
 
-  Widget _buildFilterOption(String type, String label, Color color) {
-    return Container(
-      decoration: BoxDecoration(
-        color: selectedPlaceType == type ? color : const Color(0xFF0C1C22),
-        borderRadius: BorderRadius.circular(8),
-        border: const Border(
-          top: BorderSide(color: Color(0x4DFFFFFF)),
-          bottom: BorderSide(color: Color(0x4DFFFFFF)),
-          left: BorderSide(color: Color(0x4DFFFFFF)),
-          right: BorderSide(color: Color(0x4DFFFFFF)),
+  Widget _buildFilterOption(String type, String label, Color color, IconData icon) {
+    final isSelected = selectedPlaceType == type;
+    return GestureDetector(
+      onTap: () => _selectPlaceType(type),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected ? color : const Color(0xFF2C3E50),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? color : const Color(0xFF4A5568),
+            width: 2,
+          ),
         ),
-      ),
-      child: TextButton(
-        onPressed: () => _selectPlaceType(type),
-        child: Text(
-          label,
-          style: const TextStyle(color: Colors.white),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
       ),
     );
