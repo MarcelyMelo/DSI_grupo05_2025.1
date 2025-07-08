@@ -143,106 +143,188 @@ bool _validateTimeInput(String minutes, String seconds) {
 
 
 Widget _buildTimerCard(TimerModel timer, int index) {
-  return Card(
-    margin: const EdgeInsets.only(bottom: 16),
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  return Dismissible(
+    key: Key('timer_${index}_${timer.name}'),
+    direction: DismissDirection.endToStart,
+    background: Container(
+      alignment: Alignment.centerRight,
+      padding: const EdgeInsets.only(right: 20),
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.red,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Row( // Adiciona um Row aqui
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded( // Expanded agora está dentro de uma Row, corretamente
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      timer.name,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
-                    ),
-                    if (timer.isPomodoro) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        timer.isStudyPhase ? '⏳ Fase: Foco' : '☕ Fase: Descanso',
-                        style: TextStyle(
-                          color: timer.isStudyPhase ? Colors.green : Colors.blue,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Intervalos: ${timer.completedIntervals}/${timer.intervals}',
-                        style: const TextStyle(fontSize: 14),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.edit, color: Colors.blue, size: 24),
-                onPressed: () => _editTimer(index),
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red, size: 24),
-                onPressed: () => _removeTimer(index),
-              ),
-            ],
+          Icon(
+            Icons.delete,
+            color: Colors.white,
+            size: 32,
           ),
-          const SizedBox(height: 16),
-
+          SizedBox(height: 4),
           Text(
-            'Tempo: ${_formatDuration(timer.duration)}',
+            'Deletar',
             style: TextStyle(
-              fontSize: 24,
+              color: Colors.white,
               fontWeight: FontWeight.bold,
-              color: timer.isRunning ? Colors.green : Colors.black,
             ),
           ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Botão Iniciar
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: timer.isRunning ? Colors.grey : Colors.green,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
-                onPressed: timer.isRunning ? null : () => _startTimer(index),
-                child: const Text('Iniciar', style: TextStyle(color: Colors.white)),
-              ),
-              const SizedBox(width: 8),
-              
-              // Botão Parar
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: timer.isRunning ? Colors.red : Colors.grey,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
-                onPressed: timer.isRunning ? () => _stopTimer(index) : null,
-                child: const Text('Parar', style: TextStyle(color: Colors.white)),
-              ),
-              const SizedBox(width: 8),
-              
-              // Novo Botão Reiniciar
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: !timer.isRunning ? Colors.orange : Colors.grey,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
-                onPressed: !timer.isRunning ? () => _resetTimer(index) : null,
-                child: const Text('Reiniciar', style: TextStyle(color: Colors.white)),
-              ),
-        
-
-            ],
-          ),
         ],
+      ),
+    ),
+    confirmDismiss: (direction) async {
+      return await showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Confirmar exclusão'),
+            content: Text('Tem certeza que deseja deletar "${timer.name}"?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancelar'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text(
+                  'Deletar',
+                  style: TextStyle(color: Colors.red),
+                ),
+              ),
+            ],
+          );
+        },
+      );
+    },
+    onDismissed: (direction) {
+      // Parar o timer se estiver rodando
+      _timers[index].timer?.cancel();
+      
+      // Armazenar o timer removido para possível desfazer
+      final removedTimer = _timers[index];
+      
+      setState(() {
+        _timers.removeAt(index);
+      });
+      
+      // Mostrar SnackBar com opção de desfazer
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Timer "${removedTimer.name}" removido'),
+          duration: const Duration(seconds: 3),
+          action: SnackBarAction(
+            label: 'Desfazer',
+            onPressed: () {
+              setState(() {
+                _timers.insert(index, removedTimer);
+              });
+            },
+          ),
+        ),
+      );
+    },
+    child: Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row( // Adiciona um Row aqui
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded( // Expanded agora está dentro de uma Row, corretamente
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        timer.name,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                      if (timer.isPomodoro) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          timer.isStudyPhase ? '⏳ Fase: Foco' : '☕ Fase: Descanso',
+                          style: TextStyle(
+                            color: timer.isStudyPhase ? Colors.green : Colors.blue,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Intervalos: ${timer.completedIntervals}/${timer.intervals}',
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit, color: Colors.blue, size: 24),
+                  onPressed: () => _editTimer(index),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red, size: 24),
+                  onPressed: () => _removeTimer(index),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            Text(
+              'Tempo: ${_formatDuration(timer.duration)}',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: timer.isRunning ? Colors.green : Colors.black,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Botão Iniciar
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: timer.isRunning ? Colors.grey : Colors.green,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                  onPressed: timer.isRunning ? null : () => _startTimer(index),
+                  child: const Text('Iniciar', style: TextStyle(color: Colors.white)),
+                ),
+                const SizedBox(width: 8),
+                
+                // Botão Parar
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: timer.isRunning ? Colors.red : Colors.grey,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                  onPressed: timer.isRunning ? () => _stopTimer(index) : null,
+                  child: const Text('Parar', style: TextStyle(color: Colors.white)),
+                ),
+                const SizedBox(width: 8),
+                
+                // Novo Botão Reiniciar
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: !timer.isRunning ? Colors.orange : Colors.grey,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                  onPressed: !timer.isRunning ? () => _resetTimer(index) : null,
+                  child: const Text('Reiniciar', style: TextStyle(color: Colors.white)),
+                ),
+          
+
+              ],
+            ),
+          ],
+        ),
       ),
     ),
   );
@@ -601,4 +683,3 @@ void _stopTimer(int index) {
 
 
 }
-
