@@ -2,8 +2,8 @@ import 'package:dsi_projeto/screens/flashcard_screen.dart';
 import 'package:dsi_projeto/screens/map_screen.dart';
 import 'package:dsi_projeto/screens/profile_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:dsi_projeto/components/custom_bottom_navbar.dart'; // Importação correta
-import 'package:dsi_projeto/components/colors/appColors.dart'; // Importação das cores
+import 'package:dsi_projeto/components/custom_bottom_navbar.dart';
+import 'package:dsi_projeto/components/colors/appColors.dart';
 import 'package:dsi_projeto/screens/pomodoro_screen.dart';
 import 'package:dsi_projeto/features/schedule/schedule_page.dart';
 import 'package:dsi_projeto/features/schedule/schedule_controller.dart';
@@ -11,6 +11,7 @@ import 'package:dsi_projeto/features/schedule/models/task_model.dart';
 import 'package:dsi_projeto/features/schedule/pages/edit_task_page.dart';
 import 'package:dsi_projeto/features/schedule/widgets/monthly_view.dart';
 import 'package:dsi_projeto/features/schedule/widgets/weekly_view.dart';
+import 'package:dsi_projeto/services/task_services.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -36,7 +37,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   // Passa o controller para as páginas que precisam
   late final List<Widget> _pages = <Widget>[
-    TaskListPage(controller: _controller), // Sua tela nova
+    TaskListPage(controller: _controller),
     SchedulePage(controller: _controller),
     MapScreen(),
     PomodoroScreen(),
@@ -62,7 +63,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 }
 
-// Sua TaskListPage redesenhada (com correção no método deleteTask)
 class TaskListPage extends StatefulWidget {
   final ScheduleController controller;
 
@@ -72,7 +72,7 @@ class TaskListPage extends StatefulWidget {
   State<TaskListPage> createState() => _TaskListPageState();
 }
 
-class _TaskListPageState extends State<TaskListPage> with TickerProviderStateMixin {
+class _TaskListPageState extends State<TaskListPage> with SingleTickerProviderStateMixin {
   ScheduleController get _controller => widget.controller;
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
@@ -118,29 +118,64 @@ class _TaskListPageState extends State<TaskListPage> with TickerProviderStateMix
     });
   }
 
-  void _deleteTask(Task task) {
-  // CORREÇÃO: Use o método deleteTask que foi adicionado no controller
- _controller.deleteTask(task.id);
-  setState(() {
-    completedTasks.remove(task.id);
-  });
-  
-  // Mostrar snackbar de confirmação
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text('Tarefa "${task.title}" removida'),
-      backgroundColor: const Color(0xFF2E3A59),
-      action: SnackBarAction(
-        label: 'Desfazer',
-        textColor: const Color(0xFF6C7B95),
-        onPressed: () {
-          _controller.addTask(task);
-          setState(() {});
-        },
-      ),
-    ),
-  );
-}
+  // MÉTODO CORRIGIDO - Resolve o problema do Dismissible
+  Future<void> _deleteTask(Task task) async {
+    final taskToDelete = task;
+    
+    try {
+      // 1. PRIMEIRO: Deletar do Firebase
+      await FirebaseTaskService.deleteTask(taskToDelete.id);
+      
+      // 2. DEPOIS: Remover da lista/controller local
+      _controller.deleteTask(taskToDelete.id);
+      
+      // 3. Atualizar estado local
+      setState(() {
+        completedTasks.remove(taskToDelete.id);
+      });
+      
+      // 4. Mostrar snackbar de sucesso
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Tarefa "${taskToDelete.title}" removida'),
+            backgroundColor: const Color(0xFF2E3A59),
+            action: SnackBarAction(
+              label: 'Desfazer',
+              textColor: const Color(0xFF6C7B95),
+              onPressed: () async {
+                // Readicionar ao Firebase e à lista local
+                try {
+                  await FirebaseTaskService.createTask(taskToDelete);
+                  _controller.addTask(taskToDelete);
+                  setState(() {});
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Erro ao desfazer: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+            ),
+          ),
+        );
+      }
+    } catch (error) {
+      // Se der erro, mostrar mensagem (sem readicionar, pois não foi removido)
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao deletar: $error'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -329,7 +364,7 @@ class _TaskListPageState extends State<TaskListPage> with TickerProviderStateMix
         final isCompleted = completedTasks.contains(task.id);
         
         return Dismissible(
-          key: Key(task.id),
+          key: Key('task_${task.id}_${DateTime.now().millisecondsSinceEpoch}'),
           direction: DismissDirection.endToStart,
           background: Container(
             alignment: Alignment.centerRight,
@@ -345,8 +380,40 @@ class _TaskListPageState extends State<TaskListPage> with TickerProviderStateMix
               size: 24,
             ),
           ),
-          onDismissed: (direction) {
-            _deleteTask(task);
+          confirmDismiss: (direction) async {
+            return await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                backgroundColor: const Color(0xFF2E3A59),
+                title: const Text(
+                  'Confirmar exclusão',
+                  style: TextStyle(color: Colors.white),
+                ),
+                content: Text(
+                  'Tem certeza que deseja excluir a tarefa "${task.title}"?',
+                  style: const TextStyle(color: Color(0xFF6C7B95)),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text(
+                      'Cancelar',
+                      style: TextStyle(color: Color(0xFF6C7B95)),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: const Text(
+                      'Excluir',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ),
+                ],
+              ),
+            ) ?? false;
+          },
+          onDismissed: (direction) async {
+            await _deleteTask(task);
           },
           child: _buildTaskItem(task, isCompleted),
         );
@@ -542,7 +609,6 @@ class _TaskListPageState extends State<TaskListPage> with TickerProviderStateMix
   }
 }
 
-// SchedulePage (mantém igual ao original)
 class SchedulePage extends StatefulWidget {
   final ScheduleController controller;
 
