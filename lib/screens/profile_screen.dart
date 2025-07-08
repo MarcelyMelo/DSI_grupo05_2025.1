@@ -132,14 +132,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final imageBytes = _user!.imageBytes;
         if (imageBytes != null) {
           return Container(
-            width: 120,
-            height: 120,
+            width: 100,
+            height: 100,
             decoration: BoxDecoration(
               color: const Color(0xFF2C3E50),
               shape: BoxShape.circle,
               border: Border.all(
                 color: Colors.white,
-                width: 4,
+                width: 3,
               ),
             ),
             child: ClipOval(
@@ -150,7 +150,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   print('Erro ao carregar imagem base64: $error');
                   return const Icon(
                     Icons.person,
-                    size: 60,
+                    size: 50,
                     color: Colors.white,
                   );
                 },
@@ -161,14 +161,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       } else if (_user!.hasExternalImage) {
         // Display external URL image from Firestore
         return Container(
-          width: 120,
-          height: 120,
+          width: 100,
+          height: 100,
           decoration: BoxDecoration(
             color: const Color(0xFF2C3E50),
             shape: BoxShape.circle,
             border: Border.all(
               color: Colors.white,
-              width: 4,
+              width: 3,
             ),
           ),
           child: ClipOval(
@@ -188,7 +188,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 print('Erro ao carregar imagem externa: $error');
                 return const Icon(
                   Icons.person,
-                  size: 60,
+                  size: 50,
                   color: Colors.white,
                 );
               },
@@ -201,14 +201,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     // Fallback to Firebase Auth photo if no Firestore image
     if (_firebaseUser?.photoURL != null) {
       return Container(
-        width: 120,
-        height: 120,
+        width: 100,
+        height: 100,
         decoration: BoxDecoration(
           color: const Color(0xFF2C3E50),
           shape: BoxShape.circle,
           border: Border.all(
             color: Colors.white,
-            width: 4,
+            width: 3,
           ),
         ),
         child: ClipOval(
@@ -228,7 +228,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               print('Erro ao carregar foto do Firebase Auth: $error');
               return const Icon(
                 Icons.person,
-                size: 60,
+                size: 50,
                 color: Colors.white,
               );
             },
@@ -239,19 +239,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     // Default avatar if no image is available
     return Container(
-      width: 120,
-      height: 120,
+      width: 100,
+      height: 100,
       decoration: BoxDecoration(
         color: const Color(0xFF2C3E50),
         shape: BoxShape.circle,
         border: Border.all(
           color: Colors.white,
-          width: 4,
+          width: 3,
         ),
       ),
       child: const Icon(
         Icons.person,
-        size: 60,
+        size: 50,
         color: Colors.white,
       ),
     );
@@ -349,7 +349,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
 
-        Expanded(
+        // MAIN CHANGE: Use Flexible instead of Expanded and SingleChildScrollView
+        Flexible(
           child: Container(
             decoration: const BoxDecoration(
               color: Color(0xFFF5F5F5),
@@ -358,189 +359,192 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 topRight: Radius.circular(30),
               ),
             ),
-            child: Column(
-              children: [
-                const SizedBox(height: 40),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Profile Avatar - Made smaller to save space
+                  _buildProfileImage(),
 
-                // Profile Avatar - Updated to use the new method
-                _buildProfileImage(),
+                  const SizedBox(height: 20),
 
-                const SizedBox(height: 24),
-
-                // Welcome text
-                const Text(
-                  'Bem-vindo(a)!',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2C3E50),
+                  // Welcome text
+                  const Text(
+                    'Bem-vindo(a)!',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2C3E50),
+                    ),
                   ),
-                ),
 
-                const SizedBox(height: 8),
+                  const SizedBox(height: 8),
 
-                // User name - prioriza dados do Firestore, depois Firebase Auth
-                Text(
-                  _user?.name ?? _firebaseUser?.displayName ?? 'Usuário',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    color: Color(0xFF7F8C8D),
-                    fontWeight: FontWeight.w500,
+                  // User name - prioriza dados do Firestore, depois Firebase Auth
+                  Text(
+                    _user?.name ?? _firebaseUser?.displayName ?? 'Usuário',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Color(0xFF7F8C8D),
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
 
-                // Email do usuário
-                const SizedBox(height: 4),
-                Text(
-                  _firebaseUser?.email ?? 'Email não disponível',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF95A5A6),
+                  // Email do usuário
+                  const SizedBox(height: 4),
+                  Text(
+                    _firebaseUser?.email ?? 'Email não disponível',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF95A5A6),
+                    ),
                   ),
-                ),
 
-                const SizedBox(height: 40),
+                  const SizedBox(height: 24),
 
-                // Stats section
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                  child: Column(
-                    children: [
-                      // Study hours card
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
+                  // Stats section
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                    child: Column(
+                      children: [
+                        // Study hours card
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Horas Estudadas',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFF7F8C8D),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                _user?.getFormattedStudyTime() ?? '0h00min',
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF2C3E50),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+
+                        const SizedBox(height: 16),
+
+                        // Bottom stats row
+                        Row(
                           children: [
-                            const Text(
-                              'Horas Estudadas',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Color(0xFF7F8C8D),
-                                fontWeight: FontWeight.w500,
+                            // Activities completed
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Atividades\nrealizadas',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFF7F8C8D),
+                                        fontWeight: FontWeight.w500,
+                                        height: 1.3,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      '${_user?.completedActivities ?? 0}',
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF2C3E50),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _user?.getFormattedStudyTime() ?? '0h00min',
-                              style: const TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF2C3E50),
+
+                            const SizedBox(width: 16),
+
+                            // Completion rate
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Taxa de\nconclusão atual',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFF7F8C8D),
+                                        fontWeight: FontWeight.w500,
+                                        height: 1.3,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      '${_user?.completionRate ?? 0}%',
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF2C3E50),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ],
                         ),
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // Bottom stats row
-                      Row(
-                        children: [
-                          // Activities completed
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Atividades\nrealizadas',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Color(0xFF7F8C8D),
-                                      fontWeight: FontWeight.w500,
-                                      height: 1.3,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    '${_user?.completedActivities ?? 0}',
-                                    style: const TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF2C3E50),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(width: 16),
-
-                          // Completion rate
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Taxa de\nconclusão atual',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Color(0xFF7F8C8D),
-                                      fontWeight: FontWeight.w500,
-                                      height: 1.3,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    '${_user?.completionRate ?? 0}%',
-                                    style: const TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF2C3E50),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
 
-                const Spacer(),
-              ],
+                  // Add bottom padding to ensure content doesn't touch the bottom
+                  const SizedBox(height: 24),
+                ],
+              ),
             ),
           ),
         ),
