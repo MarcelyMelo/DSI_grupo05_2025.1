@@ -11,6 +11,8 @@ import 'package:dsi_projeto/screens/pomodoro_screen.dart'; // 🔹 adicione essa
 import 'package:dsi_projeto/screens/map_screen.dart'; // 🔹 adicione essa linha
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'package:dsi_projeto/screens/pomodoro_screen.dart'; 
+import 'package:dsi_projeto/screens/map_screen.dart'; 
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
