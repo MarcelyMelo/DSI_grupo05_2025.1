@@ -1,18 +1,21 @@
+import 'package:dsi_projeto/services/pomodoro_service.dart';
 import 'package:flutter/material.dart';
 import 'dart:async'; // Adicione esta linha
 import 'package:dsi_projeto/screens/edit_timer_screen.dart';
 import 'package:dsi_projeto/components/time_inputs/minute_second_input.dart';
 import 'package:dsi_projeto/components/time_inputs/pomodoro_time_inputs.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class TimerModel {
-  String name;  // Removido final
+  String name; // Removido final
   int duration;
   bool isRunning;
   Timer? timer;
   bool isPomodoro;
-  int studyDuration;  // Removido final
-  int breakDuration;  // Removido final
-  int intervals;  // Removido final
+  int studyDuration; // Removido final
+  int breakDuration; // Removido final
+  int intervals; // Removido final
   int completedIntervals;
   bool isStudyPhase;
 
@@ -45,7 +48,8 @@ class TimerModel {
     if (isPomodoro) {
       duration = isStudyPhase ? studyDuration : breakDuration;
     } else {
-      duration = studyDuration; // Para timers normais, studyDuration armazena o tempo inicial
+      duration =
+          studyDuration; // Para timers normais, studyDuration armazena o tempo inicial
     }
     isStudyPhase = true;
     completedIntervals = 0;
@@ -65,9 +69,13 @@ class PomodoroScreen extends StatefulWidget {
 
 class _PomodoroScreenState extends State<PomodoroScreen> {
   final List<TimerModel> _timers = [];
+  final List<TimerFirebaseModel> _firebaseTimers = [];
+  final PomodoroService _pomodoroService = PomodoroService();
   final TextEditingController _timerNameController = TextEditingController();
-  final TextEditingController _minutesController = TextEditingController(text: '25');
-  final TextEditingController _secondsController = TextEditingController(text: '0');
+  final TextEditingController _minutesController =
+      TextEditingController(text: '25');
+  final TextEditingController _secondsController =
+      TextEditingController(text: '0');
 
   @override
   void dispose() {
@@ -80,28 +88,72 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     super.dispose();
   }
 
+  @override
+  void initState() {
+    super.initState();
+    _loadTimers();
+  }
+
+  // Load timers from Firebase
+  Future<void> _loadTimers() async {
+    try {
+      if (_pomodoroService.isAuthenticated) {
+        final timers = await _pomodoroService.getTimers();
+        setState(() {
+          _firebaseTimers.clear();
+          _firebaseTimers.addAll(timers);
+          _syncFirebaseToLocal();
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao carregar cronômetros: $e'),
+          backgroundColor: const Color(0xFFE74C3C),
+        ),
+      );
+    }
+  }
+
+  // Sync Firebase timers to local TimerModel list
+  void _syncFirebaseToLocal() {
+    _timers.clear();
+    for (final firebaseTimer in _firebaseTimers) {
+      _timers.add(TimerModel(
+        name: firebaseTimer.name,
+        duration: firebaseTimer.duration,
+        isPomodoro: firebaseTimer.isPomodoro,
+        studyDuration: firebaseTimer.studyDuration,
+        breakDuration: firebaseTimer.breakDuration,
+        intervals: firebaseTimer.intervals,
+        completedIntervals: firebaseTimer.completedIntervals,
+        isStudyPhase: firebaseTimer.isStudyPhase,
+      ));
+    }
+  }
+
   bool _validateTimeInput(String minutes, String seconds) {
     final mins = int.tryParse(minutes) ?? 0;
     final secs = int.tryParse(seconds) ?? 0;
-    
+
     if (mins < 0 || secs < 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Valores não podem ser negativos')));
+          const SnackBar(content: Text('Valores não podem ser negativos')));
       return false;
     }
-    
+
     if (secs >= 60) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Segundos devem ser menores que 60')));
+          const SnackBar(content: Text('Segundos devem ser menores que 60')));
       return false;
     }
-    
+
     if (mins == 0 && secs == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Duração não pode ser zero')));
+          const SnackBar(content: Text('Duração não pode ser zero')));
       return false;
     }
-    
+
     return true;
   }
 
@@ -243,11 +295,11 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
       onDismissed: (direction) {
         _timers[index].timer?.cancel();
         final removedTimer = _timers[index];
-        
+
         setState(() {
           _timers.removeAt(index);
         });
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Timer "${removedTimer.name}" removido'),
@@ -307,17 +359,20 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
                         if (timer.isPomodoro) ...[
                           const SizedBox(height: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 4),
                             decoration: BoxDecoration(
-                              color: timer.isStudyPhase 
+                              color: timer.isStudyPhase
                                   ? const Color(0xFF27AE60).withOpacity(0.2)
                                   : const Color(0xFF3498DB).withOpacity(0.2),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              timer.isStudyPhase ? '⏳ Fase: Foco' : '☕ Fase: Descanso',
+                              timer.isStudyPhase
+                                  ? '⏳ Fase: Foco'
+                                  : '☕ Fase: Descanso',
                               style: TextStyle(
-                                color: timer.isStudyPhase 
+                                color: timer.isStudyPhase
                                     ? const Color(0xFF27AE60)
                                     : const Color(0xFF3498DB),
                                 fontWeight: FontWeight.w500,
@@ -379,7 +434,9 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
                   style: TextStyle(
                     fontSize: 48,
                     fontWeight: FontWeight.w700,
-                    color: timer.isRunning ? const Color(0xFF27AE60) : Colors.white,
+                    color: timer.isRunning
+                        ? const Color(0xFF27AE60)
+                        : Colors.white,
                     fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
@@ -498,18 +555,22 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
                         labelText: 'Nome do Cronômetro',
-                        labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+                        labelStyle:
+                            TextStyle(color: Colors.white.withOpacity(0.7)),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                          borderSide:
+                              BorderSide(color: Colors.white.withOpacity(0.3)),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                          borderSide:
+                              BorderSide(color: Colors.white.withOpacity(0.3)),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF3498DB)),
+                          borderSide:
+                              const BorderSide(color: Color(0xFF3498DB)),
                         ),
                       ),
                       autofocus: true,
@@ -587,25 +648,35 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
                   ),
                   onPressed: () {
                     if (isPomodoro) {
-                      final breakMinutes = int.tryParse(breakMinutesController.text) ?? 5;
-                      final breakSeconds = int.tryParse(breakSecondsController.text) ?? 0;
-                      
-                      if (!_validateTimeInput(breakMinutes.toString(), breakSeconds.toString())) return;
-                      
+                      final breakMinutes =
+                          int.tryParse(breakMinutesController.text) ?? 5;
+                      final breakSeconds =
+                          int.tryParse(breakSecondsController.text) ?? 0;
+
+                      if (!_validateTimeInput(
+                          breakMinutes.toString(), breakSeconds.toString()))
+                        return;
+
                       _addTimer(
                         _timerNameController.text,
-                        (int.parse(studyMinutesController.text) * 60) + int.parse(studySecondsController.text),
+                        (int.parse(studyMinutesController.text) * 60) +
+                            int.parse(studySecondsController.text),
                         isPomodoro: true,
-                        studyDuration: (int.parse(studyMinutesController.text) * 60) + int.parse(studySecondsController.text),
+                        studyDuration:
+                            (int.parse(studyMinutesController.text) * 60) +
+                                int.parse(studySecondsController.text),
                         breakDuration: (breakMinutes * 60) + breakSeconds,
                         intervals: int.tryParse(intervalsController.text) ?? 4,
                       );
                     } else {
-                      if (!_validateTimeInput(minutesController.text, secondsController.text)) return;
-                      
+                      if (!_validateTimeInput(
+                          minutesController.text, secondsController.text))
+                        return;
+
                       _addTimer(
                         _timerNameController.text,
-                        (int.parse(minutesController.text) * 60) + int.parse(secondsController.text),
+                        (int.parse(minutesController.text) * 60) +
+                            int.parse(secondsController.text),
                         isPomodoro: false,
                       );
                     }
@@ -632,37 +703,83 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     });
   }
 
-  void _addTimer(
+  // Updated _addTimer method to save to Firebase
+  Future<void> _addTimer(
     String name,
     int duration, {
     bool isPomodoro = false,
     int studyDuration = 1500,
     int breakDuration = 300,
     int intervals = 4,
-  }) {
+  }) async {
     String finalName = name.trim();
     if (finalName.isEmpty) {
       final baseName = isPomodoro ? 'Pomodoro' : 'Temporizador';
       int counter = 1;
-      
+
       while (_timers.any((t) => t.name == '$baseName$counter')) {
         counter++;
       }
-      
+
       finalName = '$baseName$counter';
     }
 
-    setState(() {
-      _timers.add(TimerModel(
-        name: finalName,
-        duration: isPomodoro ? studyDuration : duration,
-        isPomodoro: isPomodoro,
-        studyDuration: isPomodoro ? studyDuration : duration,
-        breakDuration: breakDuration,
-        intervals: intervals,
-      ));
-    });
-    
+    try {
+      if (_pomodoroService.isAuthenticated) {
+        // Create Firebase timer
+        final firebaseTimer = PomodoroService.fromTimerModel(
+          name: finalName,
+          duration: isPomodoro ? studyDuration : duration,
+          isPomodoro: isPomodoro,
+          studyDuration: isPomodoro ? studyDuration : duration,
+          breakDuration: breakDuration,
+          intervals: intervals,
+        );
+
+        final timerId = await _pomodoroService.createTimer(firebaseTimer);
+
+        // Add to local list
+        setState(() {
+          _timers.add(TimerModel(
+            name: finalName,
+            duration: isPomodoro ? studyDuration : duration,
+            isPomodoro: isPomodoro,
+            studyDuration: isPomodoro ? studyDuration : duration,
+            breakDuration: breakDuration,
+            intervals: intervals,
+          ));
+
+          _firebaseTimers.add(firebaseTimer.copyWith(id: timerId));
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Cronômetro "$finalName" criado com sucesso!'),
+            backgroundColor: const Color(0xFF27AE60),
+          ),
+        );
+      } else {
+        // Fallback to local only
+        setState(() {
+          _timers.add(TimerModel(
+            name: finalName,
+            duration: isPomodoro ? studyDuration : duration,
+            isPomodoro: isPomodoro,
+            studyDuration: isPomodoro ? studyDuration : duration,
+            breakDuration: breakDuration,
+            intervals: intervals,
+          ));
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao criar cronômetro: $e'),
+          backgroundColor: const Color(0xFFE74C3C),
+        ),
+      );
+    }
+
     _timerNameController.clear();
     _minutesController.clear();
     _secondsController.clear();
@@ -672,10 +789,10 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     setState(() {
       _timers[index].timer?.cancel();
       _timers[index].isRunning = false;
-      
+
       if (_timers[index].isPomodoro) {
-        _timers[index].duration = _timers[index].isStudyPhase 
-            ? _timers[index].studyDuration 
+        _timers[index].duration = _timers[index].isStudyPhase
+            ? _timers[index].studyDuration
             : _timers[index].breakDuration;
         _timers[index].isStudyPhase = true;
         _timers[index].completedIntervals = 0;
@@ -685,7 +802,8 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     });
   }
 
-  void _removeTimer(int index) {
+  // Updated _removeTimer method to delete from Firebase
+  Future<void> _removeTimer(int index) async {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -706,10 +824,34 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
             ),
           ),
           TextButton(
-            onPressed: () {
-              _timers[index].timer?.cancel();
-              setState(() => _timers.removeAt(index));
-              Navigator.pop(context);
+            onPressed: () async {
+              try {
+                _timers[index].timer?.cancel();
+
+                if (_pomodoroService.isAuthenticated &&
+                    index < _firebaseTimers.length) {
+                  await _pomodoroService.deleteTimer(_firebaseTimers[index].id);
+                  _firebaseTimers.removeAt(index);
+                }
+
+                setState(() => _timers.removeAt(index));
+                Navigator.pop(context);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Cronômetro removido com sucesso!'),
+                    backgroundColor: Color(0xFF27AE60),
+                  ),
+                );
+              } catch (e) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Erro ao remover cronômetro: $e'),
+                    backgroundColor: const Color(0xFFE74C3C),
+                  ),
+                );
+              }
             },
             child: const Text(
               'Remover',
@@ -721,9 +863,10 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     );
   }
 
-  void _editTimer(int index) async {
+  // Updated _editTimer method to update Firebase
+  Future<void> _editTimer(int index) async {
     final timer = _timers[index];
-    
+
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -742,28 +885,75 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     );
 
     if (result != null && result is Map) {
-      setState(() {
-        _timers[index].name = result['name'];
-        _timers[index].studyDuration = (result['studyMinutes'] * 60) + result['studySeconds'];
-        _timers[index].breakDuration = (result['breakMinutes'] * 60) + result['breakSeconds'];
-        _timers[index].intervals = result['intervals'];
-        
-        if (_timers[index].isPomodoro) {
-          _timers[index].duration = _timers[index].isStudyPhase 
-              ? _timers[index].studyDuration 
-              : _timers[index].breakDuration;
-        } else {
-          _timers[index].duration = (result['minutes'] * 60) + result['seconds'];
+      try {
+        setState(() {
+          _timers[index].name = result['name'];
+          _timers[index].studyDuration =
+              (result['studyMinutes'] * 60) + result['studySeconds'];
+          _timers[index].breakDuration =
+              (result['breakMinutes'] * 60) + result['breakSeconds'];
+          _timers[index].intervals = result['intervals'];
+
+          if (_timers[index].isPomodoro) {
+            _timers[index].duration = _timers[index].isStudyPhase
+                ? _timers[index].studyDuration
+                : _timers[index].breakDuration;
+          } else {
+            _timers[index].duration =
+                (result['minutes'] * 60) + result['seconds'];
+          }
+
+          if (_timers[index].isRunning) {
+            _timers[index].stop();
+            _startTimer(index);
+          }
+        });
+
+        // Update Firebase
+        if (_pomodoroService.isAuthenticated &&
+            index < _firebaseTimers.length) {
+          final updatedFirebaseTimer = _firebaseTimers[index].copyWith(
+            name: result['name'],
+            studyDuration:
+                (result['studyMinutes'] * 60) + result['studySeconds'],
+            breakDuration:
+                (result['breakMinutes'] * 60) + result['breakSeconds'],
+            intervals: result['intervals'],
+            duration: _timers[index].duration,
+          );
+
+          await _pomodoroService.updateTimer(updatedFirebaseTimer);
+          _firebaseTimers[index] = updatedFirebaseTimer;
         }
-        
-        if (_timers[index].isRunning) {
-          _timers[index].stop();
-          _startTimer(index);
-        }
-      });
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao atualizar cronômetro: $e'),
+            backgroundColor: const Color(0xFFE74C3C),
+          ),
+        );
+      }
     }
   }
 
+  // Helper method to update Firebase progress
+  Future<void> _updateFirebaseProgress(int index) async {
+    try {
+      if (_pomodoroService.isAuthenticated && index < _firebaseTimers.length) {
+        await _pomodoroService.updateTimerProgress(
+          timerId: _firebaseTimers[index].id,
+          completedIntervals: _timers[index].completedIntervals,
+          isStudyPhase: _timers[index].isStudyPhase,
+          currentDuration: _timers[index].duration,
+        );
+      }
+    } catch (e) {
+      // Don't show error to user for progress updates
+      debugPrint('Error updating Firebase progress: $e');
+    }
+  }
+
+  // Updated _startTimer method to sync progress with Firebase
   void _startTimer(int index) {
     if (!_timers[index].isRunning && _timers[index].isPomodoro) {
       if (_timers[index].completedIntervals >= _timers[index].intervals) {
@@ -787,9 +977,14 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
               setState(() {
                 if (_timers[index].isStudyPhase) {
                   _timers[index].completedIntervals++;
+
+                  // Update Firebase progress
+                  _updateFirebaseProgress(index);
+
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Intervalo ${_timers[index].completedIntervals} completado!'),
+                      content: Text(
+                          'Intervalo ${_timers[index].completedIntervals} completado!'),
                       duration: const Duration(seconds: 2),
                       backgroundColor: const Color(0xFF34495E),
                       behavior: SnackBarBehavior.floating,
@@ -799,7 +994,8 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
                     ),
                   );
 
-                  if (_timers[index].completedIntervals >= _timers[index].intervals) {
+                  if (_timers[index].completedIntervals >=
+                      _timers[index].intervals) {
                     _stopTimer(index);
                     _showCompletionDialog(context);
                   } else {
@@ -868,7 +1064,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
   void _stopTimer(int index) {
     setState(() {
       _timers[index].timer?.cancel();
-      _timers[index].isRunning = false; 
+      _timers[index].isRunning = false;
     });
   }
 }
