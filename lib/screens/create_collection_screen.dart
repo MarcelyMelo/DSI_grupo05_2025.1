@@ -1,3 +1,4 @@
+import 'package:dsi_projeto/components/colors/appColors.dart';
 import 'package:flutter/material.dart';
 import '../models/collection.dart';
 import '../services/collection_service.dart';
@@ -62,13 +63,13 @@ class _CreateCollectionScreenState extends State<CreateCollectionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A), // Tema escuro consistente
+      backgroundColor: AppColors.backgroundLogin, // Tema escuro consistente
       appBar: AppBar(
         title: const Text(
           'Criar Nova Coleção',
           style: TextStyle(color: Colors.white),
         ),
-        backgroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: AppColors.backgroundLogin,
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
       ),
@@ -105,7 +106,7 @@ class _CreateCollectionScreenState extends State<CreateCollectionScreen> {
                 child: ElevatedButton(
                   onPressed: _createCollection,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2A5F4F),
+                    backgroundColor: AppColors.blue, // Cor do botão
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(

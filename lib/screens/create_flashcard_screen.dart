@@ -1,3 +1,4 @@
+import 'package:dsi_projeto/components/colors/appColors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import '../models/collection.dart';
@@ -17,7 +18,7 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
   final _formKey = GlobalKey<FormState>();
   final _questionController = TextEditingController();
   final _answerController = TextEditingController();
-  
+
   Collection? _selectedCollection;
   Color _selectedColor = Colors.blue;
   List<Collection> _collections = [];
@@ -89,7 +90,8 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Flashcard adicionado à coleção "${_selectedCollection!.name}"!'),
+            content: Text(
+                'Flashcard adicionado à coleção "${_selectedCollection!.name}"!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -108,7 +110,7 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        backgroundColor: const Color(0xFF2A2A2A),
+        backgroundColor: AppColors.backgroundLogin,
         child: Container(
           width: 380,
           height: 500,
@@ -139,7 +141,8 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
                   paletteType: PaletteType.hsvWithHue,
                   portraitOnly: true,
                   showLabel: false,
-                  pickerAreaBorderRadius: const BorderRadius.all(Radius.circular(8)),
+                  pickerAreaBorderRadius:
+                      const BorderRadius.all(Radius.circular(8)),
                 ),
               ),
               const SizedBox(height: 15),
@@ -159,7 +162,8 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF4DD0E1),
                       foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 10),
                     ),
                     child: const Text('OK'),
                   ),
@@ -175,7 +179,7 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: AppColors.backgroundLogin,
       appBar: AppBar(
         title: const Text(
           'Criar flashcard',
@@ -218,12 +222,13 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    
+
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF2A2A2A),
+                        color: Colors.transparent,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: Colors.white30),
                       ),
@@ -266,7 +271,7 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    
+
                     GestureDetector(
                       onTap: _showColorPicker,
                       child: Container(
@@ -297,7 +302,7 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    
+
                     Container(
                       height: 120,
                       decoration: BoxDecoration(
@@ -310,7 +315,8 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
                         maxLines: null,
                         expands: true,
                         textAlignVertical: TextAlignVertical.top,
-                        style: const TextStyle(color: Colors.white, fontSize: 16),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 16),
                         decoration: const InputDecoration(
                           hintText: 'Digite sua pergunta aqui...',
                           hintStyle: TextStyle(color: Colors.white54),
@@ -338,7 +344,7 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    
+
                     Container(
                       height: 120,
                       decoration: BoxDecoration(
@@ -351,7 +357,8 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
                         maxLines: null,
                         expands: true,
                         textAlignVertical: TextAlignVertical.top,
-                        style: const TextStyle(color: Colors.white, fontSize: 16),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 16),
                         decoration: const InputDecoration(
                           hintText: 'Digite sua resposta aqui...',
                           hintStyle: TextStyle(color: Colors.white54),
@@ -392,7 +399,7 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 20), // Espaço extra no final
                   ],
                 ),
