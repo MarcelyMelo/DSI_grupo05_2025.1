@@ -373,8 +373,7 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
     final cardKey = '${flashcard.question}_${flashcard.answer}';
     final isFlipped = _flippedCards[cardKey] ?? false;
 
-    return // In your _viewCollection method, replace the GestureDetector with:
-        FlipCard(
+    return FlipCard(
       front: flashcard.question,
       back: flashcard.answer,
       isKnown: flashcard.isKnown,
@@ -415,13 +414,13 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => Scaffold(
-          backgroundColor: const Color(0xFF1A1A1A),
+          backgroundColor: AppColors.backgroundLogin,
           appBar: AppBar(
             title: Text(
               collection.name,
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: const Color(0xFF1A1A1A),
+            backgroundColor: AppColors.blue,
             iconTheme: const IconThemeData(color: Colors.white),
             elevation: 0,
           ),
@@ -431,56 +430,18 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
             separatorBuilder: (context, index) => const SizedBox(height: 16),
             itemBuilder: (context, index) {
               final flashcard = collection.flashcards[index];
-              final cardKey =
-                  '${flashcard.question}_${flashcard.answer}_$index';
-              final isFlipped = _flippedCards[cardKey] ?? false;
 
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _flippedCards[cardKey] = !isFlipped;
-                  });
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2A2A2A),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        isFlipped ? 'Resposta:' : 'Pergunta:',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.white.withOpacity(0.6),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        child: Text(
-                          isFlipped ? flashcard.answer : flashcard.question,
-                          key: ValueKey(isFlipped),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Toque para ${isFlipped ? 'ver pergunta' : 'ver resposta'}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.white.withOpacity(0.4),
-                        ),
-                      ),
-                    ],
-                  ),
+              return Container(
+                height: 300, // Set a fixed height for the FlipCard
+                child: FlipCard(
+                  front: flashcard.question,
+                  back: flashcard.answer,
+                  isKnown: flashcard.isKnown,
+                  showStatusButton: false, // Hide status button in list view
+                  frontColor: Colors.blue[600],
+                  backColor: flashcard.isKnown
+                      ? Colors.green[600]
+                      : Colors.orange[600],
                 ),
               );
             },
