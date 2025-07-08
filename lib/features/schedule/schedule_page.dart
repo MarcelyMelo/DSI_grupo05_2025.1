@@ -12,7 +12,7 @@ class SchedulePage extends StatefulWidget {
 }
 
 class _SchedulePageState extends State<SchedulePage> with TickerProviderStateMixin {
-  final ScheduleController _controller = ScheduleController.instance;
+  final ScheduleController _controller = ScheduleController();
   late AnimationController _fabAnimationController;
   late Animation<double> _fabAnimation;
 
