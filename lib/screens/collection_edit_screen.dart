@@ -54,7 +54,8 @@ class _CollectionEditPageState extends State<CollectionEditPage> {
         _filteredFlashcards.remove(flashcardToRemove);
       });
 
-      _updateCollectionInService();
+      // Don't call _updateCollectionInService() here!
+      // The collection will be updated when the user saves changes
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -113,19 +114,17 @@ class _CollectionEditPageState extends State<CollectionEditPage> {
   }
 
   void _updateCollectionInService() {
-    // Remove a coleção antiga
-    widget.collectionService.removeCollection(_originalName);
-
-    // Adiciona a coleção atualizada
+    // Create the updated collection
     final updatedCollection = Collection(
       name: _nameController.text,
       flashcards: _flashcards,
       createdAt: widget.collection.createdAt,
     );
 
-    widget.collectionService.addCollection(updatedCollection);
+    // Use the updateCollection method instead of remove + add
+    widget.collectionService.updateCollection(_originalName, updatedCollection);
 
-    // Atualiza o nome original se foi alterado
+    // Update the original name if it was changed
     _originalName = _nameController.text;
   }
 
@@ -251,6 +250,7 @@ class _CollectionEditPageState extends State<CollectionEditPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Campo Nome
+            // Campo Nome
             Row(
               children: [
                 const Text(
@@ -262,41 +262,6 @@ class _CollectionEditPageState extends State<CollectionEditPage> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                // Search Bar
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (value) {
-                      setState(() {
-                        _isSearching = value.isNotEmpty;
-                      });
-                    },
-                    decoration: InputDecoration(
-                      hintText: 'Buscar flashcards...',
-                      prefixIcon: const Icon(Icons.search),
-                      suffixIcon: _searchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() {
-                                  _isSearching = false;
-                                });
-                              },
-                            )
-                          : null,
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
                 Expanded(
                   child: Container(
                     decoration: BoxDecoration(
@@ -316,6 +281,42 @@ class _CollectionEditPageState extends State<CollectionEditPage> {
                   ),
                 ),
               ],
+            ),
+
+            const SizedBox(height: 20),
+
+// Search Bar
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (value) {
+                  setState(() {
+                    _isSearching = value.isNotEmpty;
+                  });
+                },
+                decoration: InputDecoration(
+                  hintText: 'Buscar flashcards...',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {
+                              _isSearching = false;
+                            });
+                          },
+                        )
+                      : null,
+                  border: InputBorder.none,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+              ),
             ),
 
             const SizedBox(height: 20),
