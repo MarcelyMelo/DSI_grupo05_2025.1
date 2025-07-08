@@ -18,16 +18,50 @@ class FlashcardScreen extends StatefulWidget {
 class _FlashcardScreenState extends State<FlashcardScreen> {
   final CollectionService _collectionService = CollectionService();
   final Map<String, bool> _flippedCards = {};
+  final TextEditingController _searchController = TextEditingController();
+  List<Collection> _filteredCollections = [];
+  bool _isSearching = false;
 
   @override
   void initState() {
     super.initState();
+    _searchController.addListener(_filterCollections);
     _loadCollections();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadCollections() async {
     await _collectionService.initialize();
-    setState(() {});
+    setState(() {
+      _filteredCollections = _collectionService.getAllCollectionsSync();
+    });
+  }
+
+  void _filterCollections() {
+    final collections = _collectionService.getAllCollectionsSync();
+    setState(() {
+      if (_searchController.text.isEmpty) {
+        _filteredCollections = collections;
+      } else {
+        _filteredCollections = collections.where((collection) {
+          return collection.name
+                  .toLowerCase()
+                  .contains(_searchController.text.toLowerCase()) ||
+              collection.flashcards.any((flashcard) =>
+                  flashcard.question
+                      .toLowerCase()
+                      .contains(_searchController.text.toLowerCase()) ||
+                  flashcard.answer
+                      .toLowerCase()
+                      .contains(_searchController.text.toLowerCase()));
+        }).toList();
+      }
+    });
   }
 
   void _navigateToEditCollection(Collection collection) {
@@ -76,6 +110,7 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
     if (shouldDelete == true) {
       _collectionService.removeCollection(collection.name);
       setState(() {});
+      _filterCollections(); // Add this line after setState(() {});
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -110,16 +145,29 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.search, color: Colors.white),
+            icon: Icon(_isSearching ? Icons.close : Icons.search,
+                color: Colors.white),
             onPressed: () {
-              // Implementar busca
+              setState(() {
+                _isSearching = !_isSearching;
+                if (!_isSearching) {
+                  _searchController.clear();
+                }
+              });
             },
           ),
         ],
       ),
-      body: collections.isEmpty
-          ? _buildEmptyState()
-          : _buildCollectionsList(collections),
+      body: Column(
+        children: [
+          if (_isSearching) _buildSearchBar(),
+          Expanded(
+            child: _filteredCollections.isEmpty
+                ? _buildEmptyState()
+                : _buildCollectionsList(_filteredCollections),
+          ),
+        ],
+      ),
       // Add FloatingActionButton like home screen
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
@@ -198,6 +246,35 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: TextField(
+        controller: _searchController,
+        autofocus: true,
+        decoration: InputDecoration(
+          hintText: 'Buscar coleções ou flashcards...',
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: _searchController.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                  },
+                )
+              : null,
+          border: InputBorder.none,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        ),
       ),
     );
   }
@@ -329,6 +406,13 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
                   icon: Icon(Icons.more_vert, color: Colors.grey[600]),
                   onSelected: (value) {
                     switch (value) {
+                      case 'delete':
+                        // Find the original collection from the service
+                        final originalCollection = _collectionService
+                            .getAllCollectionsSync()
+                            .firstWhere((c) => c.name == collection.name);
+                        _deleteCollection(originalCollection);
+                        break;
                       case 'edit':
                         _navigateToEditCollection(collection);
                         break;
@@ -373,8 +457,7 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
     final cardKey = '${flashcard.question}_${flashcard.answer}';
     final isFlipped = _flippedCards[cardKey] ?? false;
 
-    return // In your _viewCollection method, replace the GestureDetector with:
-        FlipCard(
+    return FlipCard(
       front: flashcard.question,
       back: flashcard.answer,
       isKnown: flashcard.isKnown,
@@ -415,13 +498,13 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => Scaffold(
-          backgroundColor: const Color(0xFF1A1A1A),
+          backgroundColor: AppColors.backgroundLogin,
           appBar: AppBar(
             title: Text(
               collection.name,
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: const Color(0xFF1A1A1A),
+            backgroundColor: AppColors.blue,
             iconTheme: const IconThemeData(color: Colors.white),
             elevation: 0,
           ),
@@ -431,56 +514,18 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
             separatorBuilder: (context, index) => const SizedBox(height: 16),
             itemBuilder: (context, index) {
               final flashcard = collection.flashcards[index];
-              final cardKey =
-                  '${flashcard.question}_${flashcard.answer}_$index';
-              final isFlipped = _flippedCards[cardKey] ?? false;
 
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _flippedCards[cardKey] = !isFlipped;
-                  });
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2A2A2A),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        isFlipped ? 'Resposta:' : 'Pergunta:',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.white.withOpacity(0.6),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        child: Text(
-                          isFlipped ? flashcard.answer : flashcard.question,
-                          key: ValueKey(isFlipped),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Toque para ${isFlipped ? 'ver pergunta' : 'ver resposta'}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.white.withOpacity(0.4),
-                        ),
-                      ),
-                    ],
-                  ),
+              return Container(
+                height: 300, // Set a fixed height for the FlipCard
+                child: FlipCard(
+                  front: flashcard.question,
+                  back: flashcard.answer,
+                  isKnown: flashcard.isKnown,
+                  showStatusButton: false, // Hide status button in list view
+                  frontColor: Colors.blue[600],
+                  backColor: flashcard.isKnown
+                      ? Colors.green[600]
+                      : Colors.orange[600],
                 ),
               );
             },

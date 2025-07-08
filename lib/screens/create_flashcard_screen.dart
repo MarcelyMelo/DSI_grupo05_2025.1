@@ -106,76 +106,6 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
     }
   }
 
-  void _showColorPicker() {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: AppColors.backgroundLogin,
-        child: Container(
-          width: 380,
-          height: 500,
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              const Text(
-                'Selecionar Cor',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 15),
-              Expanded(
-                child: ColorPicker(
-                  pickerColor: _selectedColor,
-                  onColorChanged: (color) {
-                    setState(() {
-                      _selectedColor = color;
-                    });
-                  },
-                  colorPickerWidth: 280,
-                  pickerAreaHeightPercent: 0.7,
-                  enableAlpha: false,
-                  displayThumbColor: true,
-                  paletteType: PaletteType.hsvWithHue,
-                  portraitOnly: true,
-                  showLabel: false,
-                  pickerAreaBorderRadius:
-                      const BorderRadius.all(Radius.circular(8)),
-                ),
-              ),
-              const SizedBox(height: 15),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text(
-                      'Cancelar',
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4DD0E1),
-                      foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 10),
-                    ),
-                    child: const Text('OK'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -255,37 +185,6 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
                               _selectedCollection = value;
                             });
                           },
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Seletor de cor
-                    const Text(
-                      'Selecionar cor:',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    GestureDetector(
-                      onTap: _showColorPicker,
-                      child: Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          color: _selectedColor,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white30, width: 3),
-                        ),
-                        child: const Icon(
-                          Icons.palette,
-                          color: Colors.white,
-                          size: 24,
                         ),
                       ),
                     ),
