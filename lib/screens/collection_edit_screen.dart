@@ -54,7 +54,8 @@ class _CollectionEditPageState extends State<CollectionEditPage> {
         _filteredFlashcards.remove(flashcardToRemove);
       });
 
-      _updateCollectionInService();
+      // Don't call _updateCollectionInService() here!
+      // The collection will be updated when the user saves changes
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -113,19 +114,17 @@ class _CollectionEditPageState extends State<CollectionEditPage> {
   }
 
   void _updateCollectionInService() {
-    // Remove a coleção antiga
-    widget.collectionService.removeCollection(_originalName);
-
-    // Adiciona a coleção atualizada
+    // Create the updated collection
     final updatedCollection = Collection(
       name: _nameController.text,
       flashcards: _flashcards,
       createdAt: widget.collection.createdAt,
     );
 
-    widget.collectionService.addCollection(updatedCollection);
+    // Use the updateCollection method instead of remove + add
+    widget.collectionService.updateCollection(_originalName, updatedCollection);
 
-    // Atualiza o nome original se foi alterado
+    // Update the original name if it was changed
     _originalName = _nameController.text;
   }
 
