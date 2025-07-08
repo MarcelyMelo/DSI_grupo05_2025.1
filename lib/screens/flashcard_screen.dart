@@ -1,4 +1,5 @@
 import 'package:dsi_projeto/components/colors/appColors.dart';
+import 'package:dsi_projeto/widgets/flipcard.dart';
 import 'package:flutter/material.dart';
 import '../models/collection.dart';
 import '../models/flashcard.dart';
@@ -372,59 +373,14 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
     final cardKey = '${flashcard.question}_${flashcard.answer}';
     final isFlipped = _flippedCards[cardKey] ?? false;
 
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _flippedCards[cardKey] = !isFlipped;
-        });
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.blue,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: Colors.white.withOpacity(0.1),
-            width: 1,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              isFlipped ? 'Resposta:' : 'Pergunta:',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.white.withOpacity(0.6),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 8),
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              child: Text(
-                isFlipped ? flashcard.answer : flashcard.question,
-                key: ValueKey(isFlipped),
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Toque para ${isFlipped ? 'ver pergunta' : 'ver resposta'}',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.white.withOpacity(0.4),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return // In your _viewCollection method, replace the GestureDetector with:
+        FlipCard(
+      front: flashcard.question,
+      back: flashcard.answer,
+      isKnown: flashcard.isKnown,
+      showStatusButton: false, // Hide status button in list view
+      frontColor: Colors.blue[600],
+      backColor: Colors.green[600],
     );
   }
 

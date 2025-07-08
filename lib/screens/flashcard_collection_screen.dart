@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import '../models/collection.dart';
 import '../models/flashcard.dart';
 import '../services/collection_service.dart';
+import '../widgets/flipcard.dart';
 
 class FlashcardCollectionScreen extends StatefulWidget {
   final Collection collection;
@@ -173,7 +174,6 @@ class _FlashcardCollectionScreenState extends State<FlashcardCollectionScreen> {
                     ],
                   ),
                 ),
-
                 // Flashcard viewer
                 Expanded(
                   child: PageView.builder(
@@ -198,7 +198,6 @@ class _FlashcardCollectionScreenState extends State<FlashcardCollectionScreen> {
                     },
                   ),
                 ),
-
                 // Navigation buttons
                 Container(
                   padding: EdgeInsets.all(20),
@@ -255,7 +254,7 @@ class _FlashcardCollectionScreenState extends State<FlashcardCollectionScreen> {
     );
   }
 }
-
+/*
 class FlipCard extends StatefulWidget {
   final String front;
   final String back;
@@ -425,5 +424,4 @@ class _FlipCardState extends State<FlipCard>
         },
       ),
     );
-  }
-}
+  }*/
