@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/task_model.dart';
 import '../schedule_controller.dart';
 import '../pages/edit_task_page.dart';
+import 'monthly_view.dart';
 
 class WeeklyView extends StatefulWidget {
   final ScheduleController controller;
@@ -12,14 +13,63 @@ class WeeklyView extends StatefulWidget {
   State<WeeklyView> createState() => _WeeklyViewState();
 }
 
-class _WeeklyViewState extends State<WeeklyView> {
+class _WeeklyViewState extends State<WeeklyView> with TickerProviderStateMixin {
   int selectedDayIndex = DateTime.now().weekday - 1;
+  bool isWeeklyView = true;
+  DateTime currentWeekStart = DateTime.now();
+  
+  late AnimationController _tabAnimationController;
+  late AnimationController _listAnimationController;
+  late Animation<double> _tabAnimation;
+  late Animation<double> _listAnimation;
+
   final List<String> weekDays = const ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+  final List<String> fullWeekDays = const [
+    'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 
+    'Sexta-feira', 'Sábado', 'Domingo'
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _tabAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _listAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+    
+    _tabAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _tabAnimationController, curve: Curves.easeInOut),
+    );
+    _listAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _listAnimationController, curve: Curves.easeInOut),
+    );
+    
+    // Initialize current week start
+    _updateCurrentWeekStart();
+    
+    _tabAnimationController.forward();
+    _listAnimationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _tabAnimationController.dispose();
+    _listAnimationController.dispose();
+    super.dispose();
+  }
+
+  void _updateCurrentWeekStart() {
+    final now = DateTime.now();
+    currentWeekStart = now.subtract(Duration(days: now.weekday - 1));
+  }
 
   List<Task> get tasksForSelectedDay {
-    DateTime today = DateTime.now();
-    DateTime selectedDate = today.subtract(Duration(days: today.weekday - 1 - selectedDayIndex));
-
+    final selectedDate = currentWeekStart.add(Duration(days: selectedDayIndex));
+    
     return widget.controller.tasks.where((task) {
       return task.dueDate.year == selectedDate.year &&
           task.dueDate.month == selectedDate.month &&
@@ -28,393 +78,676 @@ class _WeeklyViewState extends State<WeeklyView> {
       ..sort((a, b) => a.dueDate.compareTo(b.dueDate));
   }
 
+  void _changeWeek(bool isNext) {
+    setState(() {
+      currentWeekStart = currentWeekStart.add(Duration(days: isNext ? 7 : -7));
+    });
+    
+    _listAnimationController.reset();
+    _listAnimationController.forward();
+  }
+
+  void _switchView() {
+    _tabAnimationController.reverse().then((_) {
+      setState(() {
+        isWeeklyView = !isWeeklyView;
+      });
+      _tabAnimationController.forward();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: const Color(0xFF2C3E50), // Fundo escuro como na segunda imagem
       body: Column(
         children: [
-          // Header com título
-          Container(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-            decoration: const BoxDecoration(
+          _buildHeader(),
+          Expanded(
+            child: isWeeklyView 
+              ? _buildWeeklyView()
+              : MonthlyView(controller: widget.controller),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 60, 24, 24),
+      decoration: const BoxDecoration(
+        color: Color(0xFF34495E), // Cor mais escura e sutil
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(32),
+          bottomRight: Radius.circular(32),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildHeaderTitle(),
+          const SizedBox(height: 24),
+          _buildViewToggle(),
+          if (isWeeklyView) ...[
+            const SizedBox(height: 24),
+            _buildWeekNavigation(),
+            const SizedBox(height: 20),
+            _buildDaySelector(),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeaderTitle() {
+    return Row(
+      children: [
+        const Icon(
+          Icons.calendar_today_rounded,
+          color: Colors.white,
+          size: 32,
+        ),
+        const SizedBox(width: 12),
+        const Text(
+          'Agenda',
+          style: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        const Spacer(),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: const Color(0xFF95A5A6).withOpacity(0.3),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            _getCurrentDateString(),
+            style: const TextStyle(
               color: Colors.white,
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(24),
-                bottomRight: Radius.circular(24),
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildViewToggle() {
+    return AnimatedBuilder(
+      animation: _tabAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _tabAnimation.value,
+          child: Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF95A5A6).withOpacity(0.2),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color(0xFF95A5A6).withOpacity(0.3),
+                width: 1,
               ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      if (!isWeeklyView) _switchView();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        color: isWeeklyView ? const Color(0xFFF5F6FA) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: isWeeklyView ? [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ] : null,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.view_week_rounded,
+                            color: isWeeklyView ? const Color(0xFF2C3E50) : Colors.white,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Semanal',
+                            style: TextStyle(
+                              color: isWeeklyView ? const Color(0xFF2C3E50) : Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      if (isWeeklyView) _switchView();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        color: !isWeeklyView ? const Color(0xFFF5F6FA) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: !isWeeklyView ? [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ] : null,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.calendar_view_month_rounded,
+                            color: !isWeeklyView ? const Color(0xFF2C3E50) : Colors.white,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Mensal',
+                            style: TextStyle(
+                              color: !isWeeklyView ? const Color(0xFF2C3E50) : Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildWeekNavigation() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        GestureDetector(
+          onTap: () => _changeWeek(false),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF95A5A6).withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: const Color(0xFF95A5A6).withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: const Icon(
+              Icons.chevron_left_rounded,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+        ),
+        Text(
+          _getWeekRangeString(),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        GestureDetector(
+          onTap: () => _changeWeek(true),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF95A5A6).withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: const Color(0xFF95A5A6).withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: const Icon(
+              Icons.chevron_right_rounded,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDaySelector() {
+    return SizedBox(
+      height: 60,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: weekDays.length,
+        itemBuilder: (context, index) {
+          final isSelected = index == selectedDayIndex;
+          final dayDate = currentWeekStart.add(Duration(days: index));
+          final hasTasksForDay = widget.controller.tasks.any((task) =>
+              task.dueDate.year == dayDate.year &&
+              task.dueDate.month == dayDate.month &&
+              task.dueDate.day == dayDate.day);
+          
+          return GestureDetector(
+            onTap: () {
+              setState(() {
+                selectedDayIndex = index;
+              });
+              _listAnimationController.reset();
+              _listAnimationController.forward();
+            },
+            child: Container(
+              width: 70,
+              margin: const EdgeInsets.only(right: 12),
+              decoration: BoxDecoration(
+                color: isSelected 
+                    ? const Color(0xFFF5F6FA)
+                    : const Color(0xFF95A5A6).withOpacity(0.2),
+                borderRadius: BorderRadius.circular(16),
+                border: isSelected ? null : Border.all(
+                  color: const Color(0xFF95A5A6).withOpacity(0.3),
+                  width: 1,
+                ),
+                boxShadow: isSelected ? [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ] : null,
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    weekDays[index],
+                    style: TextStyle(
+                      color: isSelected ? const Color(0xFF2C3E50) : Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    dayDate.day.toString(),
+                    style: TextStyle(
+                      color: isSelected ? const Color(0xFF2C3E50) : Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                  if (hasTasksForDay) ...[
+                    const SizedBox(height: 4),
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: isSelected ? const Color(0xFF2C3E50) : Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildWeeklyView() {
+    return AnimatedBuilder(
+      animation: _listAnimation,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, 50 * (1 - _listAnimation.value)),
+          child: Opacity(
+            opacity: _listAnimation.value,
+            child: tasksForSelectedDay.isEmpty
+                ? _buildEmptyState()
+                : _buildTaskList(),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF5F6FA),
+              shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Color(0x0F000000),
-                  blurRadius: 8,
-                  offset: Offset(0, 2),
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Icon(
+              Icons.event_available_rounded,
+              size: 64,
+              color: const Color(0xFF95A5A6),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Nenhuma tarefa para ${fullWeekDays[selectedDayIndex]}',
+            style: const TextStyle(
+              fontSize: 18,
+              color: Color(0xFF95A5A6),
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Que tal adicionar uma nova?',
+            style: const TextStyle(
+              fontSize: 16,
+              color: Color(0xFF95A5A6),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTaskList() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionHeader(),
+          const SizedBox(height: 20),
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: tasksForSelectedDay.length,
+            itemBuilder: (context, index) {
+              return AnimatedContainer(
+                duration: Duration(milliseconds: 300 + (index * 100)),
+                curve: Curves.easeOutCubic,
+                child: _buildTaskCard(tasksForSelectedDay[index], index),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF34495E),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Text(
+              '${tasksForSelectedDay.length} ${tasksForSelectedDay.length == 1 ? 'TAREFA' : 'TAREFAS'}',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              fullWeekDays[selectedDayIndex],
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTaskCard(Task task, int index) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _editTask(task),
+          borderRadius: BorderRadius.circular(24),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF5F6FA), // Fundo claro como na segunda imagem
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 15,
+                  offset: const Offset(0, 5),
                 ),
               ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Agenda',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1A1D29),
-                  ),
-                ),
+                _buildTaskHeader(task),
                 const SizedBox(height: 20),
-                
-                // Tabs Semanal/Mensal
-                Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1F3F4),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF6C5CE7),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF6C5CE7).withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: const Text(
-                            'Semanal',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          child: const Text(
-                            'Mensal',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Color(0xFF6B7280),
-                              fontWeight: FontWeight.w500,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                
-                const SizedBox(height: 20),
-                
-                // Seletor de dias da semana
-                SizedBox(
-                  height: 50,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: weekDays.length,
-                    itemBuilder: (context, index) {
-                      bool isSelected = index == selectedDayIndex;
-                      return GestureDetector(
-                        onTap: () => setState(() => selectedDayIndex = index),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                          margin: const EdgeInsets.only(right: 8),
-                          decoration: BoxDecoration(
-                            color: isSelected ? const Color(0xFF2196F3) : const Color(0xFFF1F3F4),
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: isSelected ? [
-                              BoxShadow(
-                                color: const Color(0xFF2196F3).withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              )
-                            ] : null,
-                          ),
-                          child: Text(
-                            weekDays[index],
-                            style: TextStyle(
-                              color: isSelected ? Colors.white : const Color(0xFF6B7280),
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
+                _buildTaskTime(task),
+                if (task.description != null && task.description!.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  _buildTaskDescription(task),
+                ],
+                const SizedBox(height: 16),
+                _buildTaskFooter(task),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
 
-          // Conteúdo principal
-          Expanded(
-            child: tasksForSelectedDay.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.event_note_outlined,
-                          size: 80,
-                          color: Colors.grey[300],
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Nenhuma tarefa para este dia',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Color(0xFF9CA3AF),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : SingleChildScrollView(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Header da seção
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF34D399),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: const Text(
-                                  'SEMANA',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                _getSelectedDayName(),
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF1A1D29),
-                                ),
-                              ),
-                              const Spacer(),
-                              IconButton(
-                                onPressed: () {},
-                                icon: const Icon(
-                                  Icons.chevron_left,
-                                  color: Color(0xFF6B7280),
-                                ),
-                              ),
-                              IconButton(
-                                onPressed: () {},
-                                icon: const Icon(
-                                  Icons.chevron_right,
-                                  color: Color(0xFF6B7280),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        
-                        const SizedBox(height: 20),
-                        
-                        // Lista de tarefas
-                        ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: tasksForSelectedDay.length,
-                          itemBuilder: (context, index) {
-                            final task = tasksForSelectedDay[index];
-                            return _buildTaskCard(task);
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
+  Widget _buildTaskHeader(Task task) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            task.title,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF2C3E50), // Texto escuro
+              decoration: task.isCompleted ? TextDecoration.lineThrough : null,
+            ),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF95A5A6).withOpacity(0.2),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: const Icon(
+            Icons.edit_rounded,
+            color: Color(0xFF2C3E50),
+            size: 20,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTaskTime(Task task) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: const Color(0xFF95A5A6).withOpacity(0.2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Icon(
+            Icons.access_time_rounded,
+            color: Color(0xFF2C3E50),
+            size: 18,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          '${task.dueDate.hour.toString().padLeft(2, '0')}:${task.dueDate.minute.toString().padLeft(2, '0')}',
+          style: const TextStyle(
+            fontSize: 18,
+            color: Color(0xFF2C3E50),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTaskDescription(Task task) {
+    return Text(
+      task.description!,
+      style: const TextStyle(
+        fontSize: 16,
+        color: Color(0xFF95A5A6),
+        height: 1.5,
+      ),
+      maxLines: 3,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+
+  Widget _buildTaskFooter(Task task) {
+    return Row(
+      children: [
+        if (task.tag.isNotEmpty) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF95A5A6).withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              task.tag,
+              style: const TextStyle(
+                color: Color(0xFF2C3E50),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
-      ),
-      
-      // Floating Action Button
-      floatingActionButton: Container(
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF6C5CE7), Color(0xFF74B9FF)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF6C5CE7).withOpacity(0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
+        const Spacer(),
+        if (task.isCompleted)
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF95A5A6).withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
             ),
-          ],
-        ),
-        child: FloatingActionButton(
-          onPressed: () {
-            // Navegar para adicionar tarefa
-          },
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          child: const Icon(
-            Icons.add,
-            color: Colors.white,
-            size: 28,
+            child: const Icon(
+              Icons.check_rounded,
+              color: Color(0xFF2C3E50),
+              size: 16,
+            ),
           ),
-        ),
-      ),
+      ],
     );
   }
 
-  Widget _buildTaskCard(Task task) {
-    Color cardColor = task.tagColor ?? _getDefaultCardColor(task.tag);
+  String _getCurrentDateString() {
+    final now = DateTime.now();
+    final months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+                   'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    return '${now.day} ${months[now.month - 1]}';
+  }
+
+  String _getWeekRangeString() {
+    final endDate = currentWeekStart.add(const Duration(days: 6));
+    final months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+                   'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
     
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: InkWell(
-        onTap: () => _editTask(task),
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                cardColor,
-                cardColor.withOpacity(0.8),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: cardColor.withOpacity(0.3),
-                blurRadius: 12,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Título da tarefa
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      task.title,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        decoration: task.isCompleted ? TextDecoration.lineThrough : null,
-                      ),
-                    ),
-                  ),
-                  
-                  // Ícone de edição
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.edit_outlined,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: 16),
-              
-              // Horário
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.access_time,
-                      color: Colors.white,
-                      size: 16,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '${task.dueDate.hour.toString().padLeft(2, '0')}:${task.dueDate.minute.toString().padLeft(2, '0')}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-              
-              // Descrição (se existir)
-              if (task.description != null && task.description!.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Text(
-                  task.description!,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.white.withOpacity(0.9),
-                    height: 1.4,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _getSelectedDayName() {
-    final days = ['Segunda-Feira', 'Terça-Feira', 'Quarta-Feira', 'Quinta-Feira', 'Sexta-Feira', 'Sábado', 'Domingo'];
-    return days[selectedDayIndex];
+    if (currentWeekStart.month == endDate.month) {
+      return '${currentWeekStart.day} - ${endDate.day} ${months[currentWeekStart.month - 1]}';
+    } else {
+      return '${currentWeekStart.day} ${months[currentWeekStart.month - 1]} - ${endDate.day} ${months[endDate.month - 1]}';
+    }
   }
 
   Future<void> _editTask(Task task) async {
     final updated = await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => EditTaskPage(task: task, controller: widget.controller),
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => EditTaskPage(
+          task: task,
+          controller: widget.controller,
+        ),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(1.0, 0.0),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeInOutCubic,
+            )),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 350),
       ),
     );
 
     if (updated == true) {
       setState(() {});
+      _listAnimationController.reset();
+      _listAnimationController.forward();
     }
   }
 
@@ -427,7 +760,7 @@ class _WeeklyViewState extends State<WeeklyView> {
       case 'estudo':
         return const Color(0xFF4ECDC4);
       case 'trabalho':
-        return const Color(0xFF6C5CE7);
+        return const Color(0xFF667EEA);
       case 'pessoal':
         return const Color(0xFF26DE81);
       case 'projeto':
@@ -435,7 +768,7 @@ class _WeeklyViewState extends State<WeeklyView> {
       case 'sociologia':
         return const Color(0xFF4ECDC4);
       case 'scrum':
-        return const Color(0xFF6C5CE7);
+        return const Color(0xFF667EEA);
       case 'protótipo':
         return const Color(0xFF45B7D1);
       default:

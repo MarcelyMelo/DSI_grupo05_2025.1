@@ -11,197 +11,109 @@ class SchedulePage extends StatefulWidget {
   State<SchedulePage> createState() => _SchedulePageState();
 }
 
-class _SchedulePageState extends State<SchedulePage> {
+class _SchedulePageState extends State<SchedulePage> with TickerProviderStateMixin {
   final ScheduleController _controller = ScheduleController.instance;
-  int _currentIndex = 1; // Começa no índice 1 (Mensal) para manter consistência com o design
+  late AnimationController _fabAnimationController;
+  late Animation<double> _fabAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _fabAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _fabAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fabAnimationController, curve: Curves.easeInOut),
+    );
+    _fabAnimationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _fabAnimationController.dispose();
+    super.dispose();
+  }
+
+  void _navigateToAddTask() async {
+    _fabAnimationController.reverse();
+    
+    final result = await Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => EditTaskPage(
+          controller: _controller,
+        ),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(0.0, 1.0);
+          const end = Offset.zero;
+          const curve = Curves.easeInOutCubic;
+
+          var tween = Tween(begin: begin, end: end).chain(
+            CurveTween(curve: curve),
+          );
+
+          return SlideTransition(
+            position: animation.drive(tween),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 350),
+      ),
+    );
+
+    _fabAnimationController.forward();
+    
+    if (result == true) {
+      // Trigger refresh if needed
+      setState(() {});
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      body: Column(
-        children: [
-          // Header com título e controles de navegação
-          Container(
-            padding: const EdgeInsets.fromLTRB(20, 50, 20, 16),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(24),
-                bottomRight: Radius.circular(24),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Color(0x0F000000),
-                  blurRadius: 8,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Agenda',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A1D29),
-                      ),
-                    ),
-                    // Botão de adicionar tarefa
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF6C5CE7), Color(0xFF74B9FF)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF6C5CE7).withOpacity(0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: IconButton(
-                        onPressed: () async {
-                          final created = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => EditTaskPage(controller: _controller),
-                            ),
-                          );
-                          if (created == true) {
-                            setState(() {});
-                          }
-                        },
-                        icon: const Icon(
-                          Icons.add,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
-                    ),
+      body: WeeklyView(
+        controller: _controller,
+      ),
+      floatingActionButton: AnimatedBuilder(
+        animation: _fabAnimation,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _fabAnimation.value,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                gradient: const LinearGradient(
+                  colors: [
+                    Color(0xFF667EEA),
+                    Color(0xFF764BA2),
                   ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                
-                const SizedBox(height: 20),
-                
-                // Tabs Semanal/Mensal
-                Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1F3F4),
-                    borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF667EEA).withOpacity(0.4),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
                   ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _currentIndex = 0;
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            decoration: _currentIndex == 0
-                                ? BoxDecoration(
-                                    color: const Color(0xFF6C5CE7),
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(0xFF6C5CE7).withOpacity(0.3),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  )
-                                : null,
-                            child: Text(
-                              'Semanal',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: _currentIndex == 0 
-                                    ? Colors.white 
-                                    : const Color(0xFF6B7280),
-                                fontWeight: _currentIndex == 0 
-                                    ? FontWeight.w600 
-                                    : FontWeight.w500,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _currentIndex = 1;
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            decoration: _currentIndex == 1
-                                ? BoxDecoration(
-                                    color: const Color(0xFF6C5CE7),
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(0xFF6C5CE7).withOpacity(0.3),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  )
-                                : null,
-                            child: Text(
-                              'Mensal',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: _currentIndex == 1 
-                                    ? Colors.white 
-                                    : const Color(0xFF6B7280),
-                                fontWeight: _currentIndex == 1 
-                                    ? FontWeight.w600 
-                                    : FontWeight.w500,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                ],
+              ),
+              child: FloatingActionButton(
+                onPressed: _navigateToAddTask,
+                backgroundColor: const Color.fromARGB(165, 255, 255, 255),
+                elevation: 0,
+                child: const Icon(
+                  Icons.add_rounded,
+                  color: Colors.white,
+                  size: 32,
                 ),
-              ],
+              ),
             ),
-          ),
-
-          // Conteúdo das views
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              switchInCurve: Curves.easeInOut,
-              switchOutCurve: Curves.easeInOut,
-              child: _currentIndex == 0
-                  ? WeeklyView(
-                      key: const ValueKey('weekly'),
-                      controller: _controller,
-                    )
-                  : MonthlyView(
-                      key: const ValueKey('monthly'),
-                      controller: _controller,
-                    ),
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
