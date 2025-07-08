@@ -29,7 +29,6 @@ class TimerModel {
     this.isStudyPhase = true,
   });
 
-
   void start(void Function() onTick) {
     timer?.cancel();
     isRunning = true;
@@ -41,21 +40,22 @@ class TimerModel {
     isRunning = false;
   }
 
-void reset() {
-  stop();
-  if (isPomodoro) {
-    duration = isStudyPhase ? studyDuration : breakDuration;
-  } else {
-    duration = studyDuration; // Para timers normais, studyDuration armazena o tempo inicial
+  void reset() {
+    stop();
+    if (isPomodoro) {
+      duration = isStudyPhase ? studyDuration : breakDuration;
+    } else {
+      duration = studyDuration; // Para timers normais, studyDuration armazena o tempo inicial
+    }
+    isStudyPhase = true;
+    completedIntervals = 0;
   }
-  isStudyPhase = true;
-  completedIntervals = 0;
-}
 
   void dispose() {
     timer?.cancel();
   }
 }
+
 class PomodoroScreen extends StatefulWidget {
   const PomodoroScreen({super.key});
 
@@ -68,618 +68,807 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
   final TextEditingController _timerNameController = TextEditingController();
   final TextEditingController _minutesController = TextEditingController(text: '25');
   final TextEditingController _secondsController = TextEditingController(text: '0');
-// Não esqueça de limpar no método dispose
-@override
-void dispose() {
-  for (var timer in _timers) {
-    timer.timer?.cancel();
-  }
-  _timerNameController.dispose();
-  _minutesController.dispose();
-  _secondsController.dispose();
-  super.dispose();
-}
-bool _validateTimeInput(String minutes, String seconds) {
-  final mins = int.tryParse(minutes) ?? 0;
-  final secs = int.tryParse(seconds) ?? 0;
-  
 
-  
-  if (mins < 0 || secs < 0) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Valores não podem ser negativos')));
-    return false;
-  }
-  
-  if (secs >= 60) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Segundos devem ser menores que 60')));
-    return false;
-  }
-  
-  if (mins == 0 && secs == 0) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Duração não pode ser zero')));
-    return false;
+  @override
+  void dispose() {
+    for (var timer in _timers) {
+      timer.timer?.cancel();
+    }
+    _timerNameController.dispose();
+    _minutesController.dispose();
+    _secondsController.dispose();
+    super.dispose();
   }
 
-  
-  
-  return true;
-}
+  bool _validateTimeInput(String minutes, String seconds) {
+    final mins = int.tryParse(minutes) ?? 0;
+    final secs = int.tryParse(seconds) ?? 0;
+    
+    if (mins < 0 || secs < 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Valores não podem ser negativos')));
+      return false;
+    }
+    
+    if (secs >= 60) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Segundos devem ser menores que 60')));
+      return false;
+    }
+    
+    if (mins == 0 && secs == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Duração não pode ser zero')));
+      return false;
+    }
+    
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF2C3E50), // Fundo escuro azul-acinzentado
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F1C1E),
-        title: const Text("Adicionar cronômetro", style: TextStyle(color: Colors.white)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add_circle, color: Colors.white, size: 28),
-            onPressed: () => _showAddTimerDialog(context),
+        backgroundColor: const Color(0xFF34495E),
+        elevation: 0,
+        title: const Text(
+          "Cronômetros",
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.w600,
           ),
-        ],
-        elevation: 4,
+        ),
+        // Removido o botão de adicionar do AppBar
       ),
-      body: Container(
-        color: Colors.grey[100],
-        child: _timers.isEmpty
-            ? const Center(
-                child: Text(
-                  'Nenhum cronômetro adicionado',
-                  style: TextStyle(fontSize: 18),
-                ),
-              )
-            : ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: _timers.length,
-                itemBuilder: (context, index) {
-                  return _buildTimerCard(_timers[index], index);
-                },
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddTimerDialog(context),
+        backgroundColor: const Color(0xFF3498DB),
+        child: const Icon(
+          Icons.add,
+          color: Colors.white,
+          size: 28,
+        ),
+      ),
+      body: _timers.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.timer_outlined,
+                    size: 80,
+                    color: Colors.white.withOpacity(0.3),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Nenhum cronômetro criado',
+                    style: TextStyle(
+                      fontSize: 20,
+                      color: Colors.white.withOpacity(0.7),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Toque no botão + para adicionar seu primeiro cronômetro',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.white.withOpacity(0.5),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
-      ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(20),
+              itemCount: _timers.length,
+              itemBuilder: (context, index) {
+                return _buildTimerCard(_timers[index], index);
+              },
+            ),
     );
   }
 
-
-Widget _buildTimerCard(TimerModel timer, int index) {
-  return Dismissible(
-    key: Key('timer_${index}_${timer.name}'),
-    direction: DismissDirection.endToStart,
-    background: Container(
-      alignment: Alignment.centerRight,
-      padding: const EdgeInsets.only(right: 20),
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.red,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: const Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.delete,
-            color: Colors.white,
-            size: 32,
-          ),
-          SizedBox(height: 4),
-          Text(
-            'Deletar',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    ),
-    confirmDismiss: (direction) async {
-      return await showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('Confirmar exclusão'),
-            content: Text('Tem certeza que deseja deletar "${timer.name}"?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancelar'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text(
-                  'Deletar',
-                  style: TextStyle(color: Colors.red),
-                ),
-              ),
-            ],
-          );
-        },
-      );
-    },
-    onDismissed: (direction) {
-      // Parar o timer se estiver rodando
-      _timers[index].timer?.cancel();
-      
-      // Armazenar o timer removido para possível desfazer
-      final removedTimer = _timers[index];
-      
-      setState(() {
-        _timers.removeAt(index);
-      });
-      
-      // Mostrar SnackBar com opção de desfazer
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Timer "${removedTimer.name}" removido'),
-          duration: const Duration(seconds: 3),
-          action: SnackBarAction(
-            label: 'Desfazer',
-            onPressed: () {
-              setState(() {
-                _timers.insert(index, removedTimer);
-              });
-            },
-          ),
+  Widget _buildTimerCard(TimerModel timer, int index) {
+    return Dismissible(
+      key: Key('timer_${index}_${timer.name}'),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        margin: const EdgeInsets.only(bottom: 20),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE74C3C),
+          borderRadius: BorderRadius.circular(20),
         ),
-      );
-    },
-    child: Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Row( // Adiciona um Row aqui
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded( // Expanded agora está dentro de uma Row, corretamente
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        timer.name,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
-                      ),
-                      if (timer.isPomodoro) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          timer.isStudyPhase ? '⏳ Fase: Foco' : '☕ Fase: Descanso',
-                          style: TextStyle(
-                            color: timer.isStudyPhase ? Colors.green : Colors.blue,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Intervalos: ${timer.completedIntervals}/${timer.intervals}',
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.edit, color: Colors.blue, size: 24),
-                  onPressed: () => _editTimer(index),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red, size: 24),
-                  onPressed: () => _removeTimer(index),
-                ),
-              ],
+            Icon(
+              Icons.delete_outline,
+              color: Colors.white,
+              size: 32,
             ),
-            const SizedBox(height: 16),
-
+            SizedBox(height: 4),
             Text(
-              'Tempo: ${_formatDuration(timer.duration)}',
+              'Deletar',
               style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: timer.isRunning ? Colors.green : Colors.black,
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
               ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Botão Iniciar
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: timer.isRunning ? Colors.grey : Colors.green,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  ),
-                  onPressed: timer.isRunning ? null : () => _startTimer(index),
-                  child: const Text('Iniciar', style: TextStyle(color: Colors.white)),
-                ),
-                const SizedBox(width: 8),
-                
-                // Botão Parar
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: timer.isRunning ? Colors.red : Colors.grey,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  ),
-                  onPressed: timer.isRunning ? () => _stopTimer(index) : null,
-                  child: const Text('Parar', style: TextStyle(color: Colors.white)),
-                ),
-                const SizedBox(width: 8),
-                
-                // Novo Botão Reiniciar
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: !timer.isRunning ? Colors.orange : Colors.grey,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  ),
-                  onPressed: !timer.isRunning ? () => _resetTimer(index) : null,
-                  child: const Text('Reiniciar', style: TextStyle(color: Colors.white)),
-                ),
-          
-
-              ],
             ),
           ],
         ),
       ),
-    ),
-  );
-}
-
-String _formatDuration(int totalSeconds) {
-  final minutes = (totalSeconds ~/ 60).toString().padLeft(2, '0');
-  final seconds = (totalSeconds % 60).toString().padLeft(2, '0');
-  return '$minutes:$seconds';
-}
-
-void _showAddTimerDialog(BuildContext context) {
-  bool isPomodoro = false;
-  final studyMinutesController = TextEditingController(text: '25');
-  final studySecondsController = TextEditingController(text: '0');
-  final breakMinutesController = TextEditingController(text: '5');
-  final breakSecondsController = TextEditingController(text: '0');
-  final intervalsController = TextEditingController(text: '4');
-  final minutesController = TextEditingController(text: '25');
-  final secondsController = TextEditingController(text: '0');
-
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return StatefulBuilder(
-        builder: (context, setState) {
-          return AlertDialog(
-            title: const Text('Adicionar Novo Cronômetro'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: _timerNameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Nome do Cronômetro',
-                      border: OutlineInputBorder(),
-                    ),
-                    autofocus: true,
+      confirmDismiss: (direction) async {
+        return await showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              backgroundColor: const Color(0xFF34495E),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: const Text(
+                'Confirmar exclusão',
+                style: TextStyle(color: Colors.white),
+              ),
+              content: Text(
+                'Tem certeza que deseja deletar "${timer.name}"?',
+                style: TextStyle(color: Colors.white.withOpacity(0.8)),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text(
+                    'Cancelar',
+                    style: TextStyle(color: Color(0xFF95A5A6)),
                   ),
-                  const SizedBox(height: 16),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text(
+                    'Deletar',
+                    style: TextStyle(color: Color(0xFFE74C3C)),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+      onDismissed: (direction) {
+        _timers[index].timer?.cancel();
+        final removedTimer = _timers[index];
+        
+        setState(() {
+          _timers.removeAt(index);
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Timer "${removedTimer.name}" removido'),
+            duration: const Duration(seconds: 3),
+            backgroundColor: const Color(0xFF34495E),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            action: SnackBarAction(
+              label: 'Desfazer',
+              textColor: const Color(0xFF3498DB),
+              onPressed: () {
+                setState(() {
+                  _timers.insert(index, removedTimer);
+                });
+              },
+            ),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 20),
+        decoration: BoxDecoration(
+          color: const Color(0xFF34495E),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          timer.name,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                        if (timer.isPomodoro) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: timer.isStudyPhase 
+                                  ? const Color(0xFF27AE60).withOpacity(0.2)
+                                  : const Color(0xFF3498DB).withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              timer.isStudyPhase ? '⏳ Fase: Foco' : '☕ Fase: Descanso',
+                              style: TextStyle(
+                                color: timer.isStudyPhase 
+                                    ? const Color(0xFF27AE60)
+                                    : const Color(0xFF3498DB),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Intervalos: ${timer.completedIntervals}/${timer.intervals}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.white.withOpacity(0.7),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
                   Row(
                     children: [
-                      const Text('Modo Pomodoro', style: TextStyle(fontWeight: FontWeight.bold)),
-                      const Spacer(),
-                      Switch(
-                        value: isPomodoro,
-                        onChanged: (value) {
-                          setState(() {
-                            isPomodoro = value;
-                          });
-                        },
+                      IconButton(
+                        icon: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF3498DB).withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.edit_outlined,
+                            color: Color(0xFF3498DB),
+                            size: 20,
+                          ),
+                        ),
+                        onPressed: () => _editTimer(index),
+                      ),
+                      IconButton(
+                        icon: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE74C3C).withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.delete_outline,
+                            color: Color(0xFFE74C3C),
+                            size: 20,
+                          ),
+                        ),
+                        onPressed: () => _removeTimer(index),
                       ),
                     ],
                   ),
-                  if (isPomodoro) ...[
-                    const SizedBox(height: 16),
-                    PomodoroTimeInputs(
-                      studyMinutesController: studyMinutesController,
-                      studySecondsController: studySecondsController,
-                      breakMinutesController: breakMinutesController,
-                      breakSecondsController: breakSecondsController,
-                      intervalsController: intervalsController,
-                    ),
-                  ] else ...[
-                    const SizedBox(height: 16),
-                    const Text('Duração total:', style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    MinuteSecondInput(
-                      minutesController: minutesController,
-                      secondsController: secondsController,
-                    ),
-                  ],
                 ],
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancelar'),
+              const SizedBox(height: 20),
+              Center(
+                child: Text(
+                  _formatDuration(timer.duration),
+                  style: TextStyle(
+                    fontSize: 48,
+                    fontWeight: FontWeight.w700,
+                    color: timer.isRunning ? const Color(0xFF27AE60) : Colors.white,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
               ),
-              ElevatedButton(
-                onPressed: () {
-                  // if (_timerNameController.text.isEmpty) {
-                  //   ScaffoldMessenger.of(context).showSnackBar(
-                  //     const SnackBar(content: Text('Digite um nome para o cronômetro')));
-                  //   return;
-                  // }
-
-                  if (isPomodoro) {
-                    final breakMinutes = int.tryParse(breakMinutesController.text) ?? 5;
-                    final breakSeconds = int.tryParse(breakSecondsController.text) ?? 0;
-                    
-                    if (!_validateTimeInput(breakMinutes.toString(), breakSeconds.toString())) return;
-                    
-                    _addTimer(
-                      _timerNameController.text, // Pode estar vazio, será tratado
-                      (int.parse(studyMinutesController.text) * 60) + int.parse(studySecondsController.text),
-                      isPomodoro: true,
-                      studyDuration: (int.parse(studyMinutesController.text) * 60) + int.parse(studySecondsController.text),
-                      breakDuration: (breakMinutes * 60) + breakSeconds,
-                      intervals: int.tryParse(intervalsController.text) ?? 4,
-                    );
-                  } else {
-                    if (!_validateTimeInput(minutesController.text, secondsController.text)) return;
-                    
-                    _addTimer(
-                      _timerNameController.text, // Pode estar vazio, será tratado
-                      (int.parse(minutesController.text) * 60) + int.parse(secondsController.text),
-                      isPomodoro: false,
-                    );
-                  }
-                  Navigator.pop(context);
-                },
-                child: const Text('Adicionar'),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildActionButton(
+                    label: 'Iniciar',
+                    icon: Icons.play_arrow,
+                    color: const Color(0xFF27AE60),
+                    isEnabled: !timer.isRunning,
+                    onPressed: () => _startTimer(index),
+                  ),
+                  _buildActionButton(
+                    label: 'Parar',
+                    icon: Icons.pause,
+                    color: const Color(0xFFE74C3C),
+                    isEnabled: timer.isRunning,
+                    onPressed: () => _stopTimer(index),
+                  ),
+                  _buildActionButton(
+                    label: 'Reiniciar',
+                    icon: Icons.refresh,
+                    color: const Color(0xFFF39C12),
+                    isEnabled: !timer.isRunning,
+                    onPressed: () => _resetTimer(index),
+                  ),
+                ],
               ),
-
             ],
-          );
-        },
-      );
-    },
-  ).then((_) {
-    // Limpar os controladores quando o diálogo for fechado
-    studyMinutesController.dispose();
-    studySecondsController.dispose();
-    breakMinutesController.dispose();
-    breakSecondsController.dispose();
-    intervalsController.dispose();
-    minutesController.dispose();
-    secondsController.dispose();
-  });
-}
-
-
-void _addTimer(
-  String name,
-  int duration, {
-  bool isPomodoro = false,
-  int studyDuration = 1500,
-  int breakDuration = 300,
-  int intervals = 4,
-}) {
-  // Gerar nome padrão se estiver vazio
-  String finalName = name.trim();
-  if (finalName.isEmpty) {
-    final baseName = isPomodoro ? 'Pomodoro' : 'Temporizador';
-    int counter = 1;
-    
-    // Encontrar o próximo número disponível
-    while (_timers.any((t) => t.name == '$baseName$counter')) {
-      counter++;
-    }
-    
-    finalName = '$baseName$counter';
+          ),
+        ),
+      ),
+    );
   }
 
-setState(() {
-    _timers.add(TimerModel(
-      name: finalName,
-      duration: isPomodoro ? studyDuration : duration,
-      isPomodoro: isPomodoro,
-      studyDuration: isPomodoro ? studyDuration : duration, // Aqui o importante
-      breakDuration: breakDuration,
-      intervals: intervals,
-    ));
-  });  
-  _timerNameController.clear();
-  _minutesController.clear();
-  _secondsController.clear();
-}
-
-void _resetTimer(int index) {
-  setState(() {
-    _timers[index].timer?.cancel();
-    _timers[index].isRunning = false;
-    
-    if (_timers[index].isPomodoro) {
-      // Resetar para os valores iniciais do Pomodoro
-      _timers[index].duration = _timers[index].isStudyPhase 
-          ? _timers[index].studyDuration 
-          : _timers[index].breakDuration;
-      _timers[index].isStudyPhase = true;
-      _timers[index].completedIntervals = 0;
-    } else {
-      // Resetar cronômetro simples para a duração original
-      // Usamos studyDuration que armazena o tempo inicial para timers normais também
-      _timers[index].duration = _timers[index].studyDuration;
-    }
-  });
-}
-
-void _removeTimer(int index) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Remover cronômetro?'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancelar'),
+  Widget _buildActionButton({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required bool isEnabled,
+    required VoidCallback onPressed,
+  }) {
+    return Container(
+      width: 90,
+      height: 50,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: isEnabled ? color : const Color(0xFF95A5A6),
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          elevation: isEnabled ? 3 : 0,
         ),
-        TextButton(
-          onPressed: () {
-            _timers[index].timer?.cancel();
-            setState(() => _timers.removeAt(index));
-            Navigator.pop(context);
-          },
-          child: const Text('Remover', style: TextStyle(color: Colors.red)),
+        onPressed: isEnabled ? onPressed : null,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
-      ],
-    ),
-  );
-}
-
-void _editTimer(int index) async {
-  final timer = _timers[index];
-  
-  final result = await Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => EditTimerScreen(
-        currentName: timer.name,
-        isPomodoro: timer.isPomodoro,
-        currentStudyMinutes: timer.studyDuration ~/ 60,
-        currentStudySeconds: timer.studyDuration % 60,
-        currentBreakMinutes: timer.breakDuration ~/ 60,
-        currentBreakSeconds: timer.breakDuration % 60,
-        currentIntervals: timer.intervals,
-        currentMinutes: timer.duration ~/ 60,
-        currentSeconds: timer.duration % 60,
       ),
-    ),
-  );
+    );
+  }
 
-  if (result != null && result is Map) {
-    setState(() {
-      // Atualiza os valores diretamente no modelo
-      _timers[index].name = result['name'];
-      _timers[index].studyDuration = (result['studyMinutes'] * 60) + result['studySeconds'];
-      _timers[index].breakDuration = (result['breakMinutes'] * 60) + result['breakSeconds'];
-      _timers[index].intervals = result['intervals'];
+  String _formatDuration(int totalSeconds) {
+    final minutes = (totalSeconds ~/ 60).toString().padLeft(2, '0');
+    final seconds = (totalSeconds % 60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
+  }
+
+  void _showAddTimerDialog(BuildContext context) {
+    bool isPomodoro = false;
+    final studyMinutesController = TextEditingController(text: '25');
+    final studySecondsController = TextEditingController(text: '0');
+    final breakMinutesController = TextEditingController(text: '5');
+    final breakSecondsController = TextEditingController(text: '0');
+    final intervalsController = TextEditingController(text: '4');
+    final minutesController = TextEditingController(text: '25');
+    final secondsController = TextEditingController(text: '0');
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: const Color(0xFF34495E),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: const Text(
+                'Adicionar Novo Cronômetro',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: _timerNameController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        labelText: 'Nome do Cronômetro',
+                        labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFF3498DB)),
+                        ),
+                      ),
+                      autofocus: true,
+                    ),
+                    const SizedBox(height: 20),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2C3E50),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          const Text(
+                            'Modo Pomodoro',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const Spacer(),
+                          Switch(
+                            value: isPomodoro,
+                            onChanged: (value) {
+                              setState(() {
+                                isPomodoro = value;
+                              });
+                            },
+                            activeColor: const Color(0xFF3498DB),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (isPomodoro) ...[
+                      const SizedBox(height: 20),
+                      PomodoroTimeInputs(
+                        studyMinutesController: studyMinutesController,
+                        studySecondsController: studySecondsController,
+                        breakMinutesController: breakMinutesController,
+                        breakSecondsController: breakSecondsController,
+                        intervalsController: intervalsController,
+                      ),
+                    ] else ...[
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Duração total:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      MinuteSecondInput(
+                        minutesController: minutesController,
+                        secondsController: secondsController,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    'Cancelar',
+                    style: TextStyle(color: Color(0xFF95A5A6)),
+                  ),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF3498DB),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () {
+                    if (isPomodoro) {
+                      final breakMinutes = int.tryParse(breakMinutesController.text) ?? 5;
+                      final breakSeconds = int.tryParse(breakSecondsController.text) ?? 0;
+                      
+                      if (!_validateTimeInput(breakMinutes.toString(), breakSeconds.toString())) return;
+                      
+                      _addTimer(
+                        _timerNameController.text,
+                        (int.parse(studyMinutesController.text) * 60) + int.parse(studySecondsController.text),
+                        isPomodoro: true,
+                        studyDuration: (int.parse(studyMinutesController.text) * 60) + int.parse(studySecondsController.text),
+                        breakDuration: (breakMinutes * 60) + breakSeconds,
+                        intervals: int.tryParse(intervalsController.text) ?? 4,
+                      );
+                    } else {
+                      if (!_validateTimeInput(minutesController.text, secondsController.text)) return;
+                      
+                      _addTimer(
+                        _timerNameController.text,
+                        (int.parse(minutesController.text) * 60) + int.parse(secondsController.text),
+                        isPomodoro: false,
+                      );
+                    }
+                    Navigator.pop(context);
+                  },
+                  child: const Text(
+                    'Adicionar',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    ).then((_) {
+      studyMinutesController.dispose();
+      studySecondsController.dispose();
+      breakMinutesController.dispose();
+      breakSecondsController.dispose();
+      intervalsController.dispose();
+      minutesController.dispose();
+      secondsController.dispose();
+    });
+  }
+
+  void _addTimer(
+    String name,
+    int duration, {
+    bool isPomodoro = false,
+    int studyDuration = 1500,
+    int breakDuration = 300,
+    int intervals = 4,
+  }) {
+    String finalName = name.trim();
+    if (finalName.isEmpty) {
+      final baseName = isPomodoro ? 'Pomodoro' : 'Temporizador';
+      int counter = 1;
       
-      // Atualiza a duração atual baseada no modo
+      while (_timers.any((t) => t.name == '$baseName$counter')) {
+        counter++;
+      }
+      
+      finalName = '$baseName$counter';
+    }
+
+    setState(() {
+      _timers.add(TimerModel(
+        name: finalName,
+        duration: isPomodoro ? studyDuration : duration,
+        isPomodoro: isPomodoro,
+        studyDuration: isPomodoro ? studyDuration : duration,
+        breakDuration: breakDuration,
+        intervals: intervals,
+      ));
+    });
+    
+    _timerNameController.clear();
+    _minutesController.clear();
+    _secondsController.clear();
+  }
+
+  void _resetTimer(int index) {
+    setState(() {
+      _timers[index].timer?.cancel();
+      _timers[index].isRunning = false;
+      
       if (_timers[index].isPomodoro) {
         _timers[index].duration = _timers[index].isStudyPhase 
             ? _timers[index].studyDuration 
             : _timers[index].breakDuration;
+        _timers[index].isStudyPhase = true;
+        _timers[index].completedIntervals = 0;
       } else {
-        _timers[index].duration = (result['minutes'] * 60) + result['seconds'];
-      }
-      
-      // Reinicia o timer se estiver em execução
-      if (_timers[index].isRunning) {
-        _timers[index].stop();
-        _startTimer(index);
+        _timers[index].duration = _timers[index].studyDuration;
       }
     });
   }
-}
 
-
-void _startTimer(int index) {
-  // Parar qualquer timer que já esteja rodando neste Pomodoro
-  if (!_timers[index].isRunning && _timers[index].isPomodoro) {
-    if (_timers[index].completedIntervals >= _timers[index].intervals) {
-      _resetTimer(index);
-    }
-  }
-
-  _timers[index].timer?.cancel();
-
-  setState(() {
-    _timers[index].isRunning = true;
-    _timers[index].timer = Timer.periodic(
-      const Duration(seconds: 1),
-      (timer) {
-        if (_timers[index].duration > 0) {
-          setState(() {
-            _timers[index].duration--;
-          });
-        } else {
-          if (_timers[index].isPomodoro) {
-            setState(() {
-              if (_timers[index].isStudyPhase) {
-                // Terminou um período de estudo
-                _timers[index].completedIntervals++;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Intervalo ${_timers[index].completedIntervals} completado!'),
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
-
-                if (_timers[index].completedIntervals >= _timers[index].intervals) {
-                  // Todos os intervalos completos
-                  _stopTimer(index);
-                  _showCompletionDialog(context);
-                } else {
-                  // Iniciar descanso
-                  _timers[index].isStudyPhase = false;
-                  _timers[index].duration = _timers[index].breakDuration;
-                }
-              } else {
-                // Terminou um período de descanso
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Hora de focar novamente!'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-                // Iniciar próximo estudo
-                _timers[index].isStudyPhase = true;
-                _timers[index].duration = _timers[index].studyDuration;
-              }
-            });
-          } else {
-            // Cronômetro simples terminou
-            _stopTimer(index);
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Cronômetro finalizado!'),
-                duration: Duration(seconds: 2),
-              ),
-            );
-          }
-        }
-      },
-    );
-  });
-}
-
-void _showCompletionDialog(BuildContext context) {
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: const Text('🎉 Pomodoro Completo!'),
-        content: const Text('Todos os intervalos foram concluídos com sucesso!'),
+  void _removeTimer(int index) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF34495E),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: const Text(
+          'Remover cronômetro?',
+          style: TextStyle(color: Colors.white),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+            child: const Text(
+              'Cancelar',
+              style: TextStyle(color: Color(0xFF95A5A6)),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              _timers[index].timer?.cancel();
+              setState(() => _timers.removeAt(index));
+              Navigator.pop(context);
+            },
+            child: const Text(
+              'Remover',
+              style: TextStyle(color: Color(0xFFE74C3C)),
+            ),
           ),
         ],
-      );
-    },
-  );
-}
-void _stopTimer(int index) {
-  setState(() {
+      ),
+    );
+  }
+
+  void _editTimer(int index) async {
+    final timer = _timers[index];
+    
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditTimerScreen(
+          currentName: timer.name,
+          isPomodoro: timer.isPomodoro,
+          currentStudyMinutes: timer.studyDuration ~/ 60,
+          currentStudySeconds: timer.studyDuration % 60,
+          currentBreakMinutes: timer.breakDuration ~/ 60,
+          currentBreakSeconds: timer.breakDuration % 60,
+          currentIntervals: timer.intervals,
+          currentMinutes: timer.duration ~/ 60,
+          currentSeconds: timer.duration % 60,
+        ),
+      ),
+    );
+
+    if (result != null && result is Map) {
+      setState(() {
+        _timers[index].name = result['name'];
+        _timers[index].studyDuration = (result['studyMinutes'] * 60) + result['studySeconds'];
+        _timers[index].breakDuration = (result['breakMinutes'] * 60) + result['breakSeconds'];
+        _timers[index].intervals = result['intervals'];
+        
+        if (_timers[index].isPomodoro) {
+          _timers[index].duration = _timers[index].isStudyPhase 
+              ? _timers[index].studyDuration 
+              : _timers[index].breakDuration;
+        } else {
+          _timers[index].duration = (result['minutes'] * 60) + result['seconds'];
+        }
+        
+        if (_timers[index].isRunning) {
+          _timers[index].stop();
+          _startTimer(index);
+        }
+      });
+    }
+  }
+
+  void _startTimer(int index) {
+    if (!_timers[index].isRunning && _timers[index].isPomodoro) {
+      if (_timers[index].completedIntervals >= _timers[index].intervals) {
+        _resetTimer(index);
+      }
+    }
+
     _timers[index].timer?.cancel();
-    _timers[index].isRunning = false; 
-  });
-}
 
+    setState(() {
+      _timers[index].isRunning = true;
+      _timers[index].timer = Timer.periodic(
+        const Duration(seconds: 1),
+        (timer) {
+          if (_timers[index].duration > 0) {
+            setState(() {
+              _timers[index].duration--;
+            });
+          } else {
+            if (_timers[index].isPomodoro) {
+              setState(() {
+                if (_timers[index].isStudyPhase) {
+                  _timers[index].completedIntervals++;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Intervalo ${_timers[index].completedIntervals} completado!'),
+                      duration: const Duration(seconds: 2),
+                      backgroundColor: const Color(0xFF34495E),
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  );
 
+                  if (_timers[index].completedIntervals >= _timers[index].intervals) {
+                    _stopTimer(index);
+                    _showCompletionDialog(context);
+                  } else {
+                    _timers[index].isStudyPhase = false;
+                    _timers[index].duration = _timers[index].breakDuration;
+                  }
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Hora de focar novamente!'),
+                      duration: Duration(seconds: 2),
+                      backgroundColor: Color(0xFF34495E),
+                    ),
+                  );
+                  _timers[index].isStudyPhase = true;
+                  _timers[index].duration = _timers[index].studyDuration;
+                }
+              });
+            } else {
+              _stopTimer(index);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Cronômetro finalizado!'),
+                  duration: Duration(seconds: 2),
+                  backgroundColor: Color(0xFF34495E),
+                ),
+              );
+            }
+          }
+        },
+      );
+    });
+  }
+
+  void _showCompletionDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF34495E),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            '🎉 Pomodoro Completo!',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: const Text(
+            'Todos os intervalos foram concluídos com sucesso!',
+            style: TextStyle(color: Colors.white),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'OK',
+                style: TextStyle(color: Color(0xFF3498DB)),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _stopTimer(int index) {
+    setState(() {
+      _timers[index].timer?.cancel();
+      _timers[index].isRunning = false; 
+    });
+  }
 }

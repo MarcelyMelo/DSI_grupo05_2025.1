@@ -7,8 +7,8 @@ import 'package:dsi_projeto/screens/profile_screen.dart';
 import 'package:dsi_projeto/screens/register_screen.dart';
 import 'package:dsi_projeto/services/collection_service.dart';
 import 'package:flutter/material.dart';
-import 'package:dsi_projeto/screens/pomodoro_screen.dart'; // 🔹 adicione essa linha
-import 'package:dsi_projeto/screens/map_screen.dart'; // 🔹 adicione essa linha
+import 'package:dsi_projeto/screens/pomodoro_screen.dart'; 
+import 'package:dsi_projeto/screens/map_screen.dart'; 
 
 void main() {
   runApp(const MainApp());
