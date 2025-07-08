@@ -6,7 +6,7 @@ import '../services/collection_service.dart';
 class CollectionEditPage extends StatefulWidget {
   final Collection collection;
   final CollectionService collectionService;
-  
+
   const CollectionEditPage({
     super.key,
     required this.collection,
@@ -21,6 +21,9 @@ class _CollectionEditPageState extends State<CollectionEditPage> {
   late TextEditingController _nameController;
   late List<Flashcard> _flashcards;
   late String _originalName;
+  final TextEditingController _searchController = TextEditingController();
+  List<Flashcard> _filteredFlashcards = [];
+  bool _isSearching = false;
 
   @override
   void initState() {
@@ -28,27 +31,31 @@ class _CollectionEditPageState extends State<CollectionEditPage> {
     _originalName = widget.collection.name;
     _nameController = TextEditingController(text: widget.collection.name);
     _flashcards = List.from(widget.collection.flashcards);
+    _filteredFlashcards = List.from(_flashcards);
+    _searchController.addListener(_filterFlashcards);
   }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
   Future<void> _removeFlashcard(int index) async {
-    // Mostrar dialog de confirmação
+    // Get the actual flashcard from the original list
+    final flashcardToRemove =
+        _isSearching ? _filteredFlashcards[index] : _flashcards[index];
     final shouldRemove = await _showRemoveDialog();
-    
+
     if (shouldRemove == true) {
       setState(() {
-        _flashcards.removeAt(index);
+        _flashcards.remove(flashcardToRemove);
+        _filteredFlashcards.remove(flashcardToRemove);
       });
-      
-      // Atualizar a coleção no service
+
       _updateCollectionInService();
-      
-      // Mostrar snackbar de confirmação
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -88,19 +95,36 @@ class _CollectionEditPageState extends State<CollectionEditPage> {
     );
   }
 
+  void _filterFlashcards() {
+    setState(() {
+      if (_searchController.text.isEmpty) {
+        _filteredFlashcards = List.from(_flashcards);
+      } else {
+        _filteredFlashcards = _flashcards.where((flashcard) {
+          return flashcard.question
+                  .toLowerCase()
+                  .contains(_searchController.text.toLowerCase()) ||
+              flashcard.answer
+                  .toLowerCase()
+                  .contains(_searchController.text.toLowerCase());
+        }).toList();
+      }
+    });
+  }
+
   void _updateCollectionInService() {
     // Remove a coleção antiga
     widget.collectionService.removeCollection(_originalName);
-    
+
     // Adiciona a coleção atualizada
     final updatedCollection = Collection(
       name: _nameController.text,
       flashcards: _flashcards,
       createdAt: widget.collection.createdAt,
     );
-    
+
     widget.collectionService.addCollection(updatedCollection);
-    
+
     // Atualiza o nome original se foi alterado
     _originalName = _nameController.text;
   }
@@ -120,7 +144,7 @@ class _CollectionEditPageState extends State<CollectionEditPage> {
 
       // Atualizar coleção no service
       _updateCollectionInService();
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -128,7 +152,8 @@ class _CollectionEditPageState extends State<CollectionEditPage> {
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.of(context).pop(true); // Retorna true indicando que houve mudanças
+        Navigator.of(context)
+            .pop(true); // Retorna true indicando que houve mudanças
       }
     } catch (e) {
       if (mounted) {
@@ -172,10 +197,11 @@ class _CollectionEditPageState extends State<CollectionEditPage> {
     if (shouldClear == true) {
       setState(() {
         _flashcards.clear();
+        _filteredFlashcards.clear();
       });
-      
+
       _updateCollectionInService();
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -236,6 +262,41 @@ class _CollectionEditPageState extends State<CollectionEditPage> {
                   ),
                 ),
                 const SizedBox(width: 12),
+                // Search Bar
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (value) {
+                      setState(() {
+                        _isSearching = value.isNotEmpty;
+                      });
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Buscar flashcards...',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() {
+                                  _isSearching = false;
+                                });
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
                 Expanded(
                   child: Container(
                     decoration: BoxDecoration(
@@ -256,9 +317,9 @@ class _CollectionEditPageState extends State<CollectionEditPage> {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 20),
-            
+
             // Botão Limpar Tudo
             SizedBox(
               width: double.infinity,
@@ -275,31 +336,40 @@ class _CollectionEditPageState extends State<CollectionEditPage> {
                 child: const Text('Limpar tudo'),
               ),
             ),
-            
+
             const SizedBox(height: 20),
-            
+
             // Lista de Flashcards
             Expanded(
-              child: _flashcards.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'Nenhum flashcard nesta coleção',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 16,
-                        ),
-                      ),
+              child: _filteredFlashcards.isEmpty
+                  ? Center(
+                      child: _isSearching && _filteredFlashcards.isEmpty
+                          ? const Text(
+                              'Nenhum flashcard encontrado',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 16,
+                              ),
+                            )
+                          : const Text(
+                              'Nenhum flashcard nesta coleção',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 16,
+                              ),
+                            ),
                     )
                   : GridView.builder(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
                         crossAxisSpacing: 12,
                         mainAxisSpacing: 12,
                         childAspectRatio: 2.5,
                       ),
-                      itemCount: _flashcards.length,
+                      itemCount: _filteredFlashcards.length,
                       itemBuilder: (context, index) {
-                        final flashcard = _flashcards[index];
+                        final flashcard = _filteredFlashcards[index];
                         return FlashcardEditItem(
                           flashcard: flashcard,
                           onRemove: () => _removeFlashcard(index),
@@ -350,7 +420,7 @@ class FlashcardEditItem extends StatelessWidget {
               ),
             ),
           ),
-          
+
           // Botão X para remover
           Positioned(
             top: 4,
