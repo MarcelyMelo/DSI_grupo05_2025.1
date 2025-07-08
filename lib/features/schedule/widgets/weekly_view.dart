@@ -3,6 +3,7 @@ import '../models/task_model.dart';
 import '../schedule_controller.dart';
 import '../pages/edit_task_page.dart';
 import 'monthly_view.dart';
+import '../../../services/task_services.dart'; // Adicionar import do serviço
 
 class WeeklyView extends StatefulWidget {
   final ScheduleController controller;
@@ -22,6 +23,9 @@ class _WeeklyViewState extends State<WeeklyView> with TickerProviderStateMixin {
   late AnimationController _listAnimationController;
   late Animation<double> _tabAnimation;
   late Animation<double> _listAnimation;
+
+  // Adicionar controle das tarefas completadas
+  Set<String> completedTasks = <String>{};
 
   final List<String> weekDays = const ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
   final List<String> fullWeekDays = const [
@@ -94,6 +98,76 @@ class _WeeklyViewState extends State<WeeklyView> with TickerProviderStateMixin {
       });
       _tabAnimationController.forward();
     });
+  }
+
+  // Função para alternar conclusão da tarefa
+  void _toggleTaskCompletion(String taskId) {
+    setState(() {
+      if (completedTasks.contains(taskId)) {
+        completedTasks.remove(taskId);
+      } else {
+        completedTasks.add(taskId);
+      }
+    });
+  }
+
+  // Função para deletar tarefa
+  Future<void> _deleteTask(Task task) async {
+    final taskToDelete = task;
+    
+    try {
+      // 1. PRIMEIRO: Deletar do Firebase
+      await FirebaseTaskService.deleteTask(taskToDelete.id);
+      
+      // 2. DEPOIS: Remover da lista/controller local
+      widget.controller.deleteTask(taskToDelete.id);
+      
+      // 3. Atualizar estado local
+      setState(() {
+        completedTasks.remove(taskToDelete.id);
+      });
+      
+      // 4. Mostrar snackbar de sucesso
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Tarefa "${taskToDelete.title}" removida'),
+            backgroundColor: const Color(0xFF2C3E50),
+            action: SnackBarAction(
+              label: 'Desfazer',
+              textColor: const Color(0xFF95A5A6),
+              onPressed: () async {
+                // Readicionar ao Firebase e à lista local
+                try {
+                  await FirebaseTaskService.createTask(taskToDelete);
+                  widget.controller.addTask(taskToDelete);
+                  setState(() {});
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Erro ao desfazer: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+            ),
+          ),
+        );
+      }
+    } catch (error) {
+      // Se der erro, mostrar mensagem (sem readicionar, pois não foi removido)
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao deletar: $error'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -337,87 +411,97 @@ class _WeeklyViewState extends State<WeeklyView> with TickerProviderStateMixin {
   }
 
   Widget _buildDaySelector() {
-    return SizedBox(
-      height: 60,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: weekDays.length,
-        itemBuilder: (context, index) {
-          final isSelected = index == selectedDayIndex;
-          final dayDate = currentWeekStart.add(Duration(days: index));
-          final hasTasksForDay = widget.controller.tasks.any((task) =>
-              task.dueDate.year == dayDate.year &&
-              task.dueDate.month == dayDate.month &&
-              task.dueDate.day == dayDate.day);
-          
-          return GestureDetector(
-            onTap: () {
-              setState(() {
-                selectedDayIndex = index;
-              });
-              _listAnimationController.reset();
-              _listAnimationController.forward();
-            },
-            child: Container(
-              width: 70,
-              margin: const EdgeInsets.only(right: 12),
-              decoration: BoxDecoration(
-                color: isSelected 
-                    ? const Color(0xFFF5F6FA)
-                    : const Color(0xFF95A5A6).withOpacity(0.2),
-                borderRadius: BorderRadius.circular(16),
-                border: isSelected ? null : Border.all(
-                  color: const Color(0xFF95A5A6).withOpacity(0.3),
-                  width: 1,
-                ),
-                boxShadow: isSelected ? [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ] : null,
+  return SizedBox(
+    height: 60,
+    child: ListView.builder(
+      scrollDirection: Axis.horizontal,
+      itemCount: weekDays.length,
+      itemBuilder: (context, index) {
+        final isSelected = index == selectedDayIndex;
+        final dayDate = currentWeekStart.add(Duration(days: index));
+        final hasTasksForDay = widget.controller.tasks.any((task) =>
+            task.dueDate.year == dayDate.year &&
+            task.dueDate.month == dayDate.month &&
+            task.dueDate.day == dayDate.day);
+        
+        return GestureDetector(
+          onTap: () {
+            setState(() {
+              selectedDayIndex = index;
+            });
+            _listAnimationController.reset();
+            _listAnimationController.forward();
+          },
+          child: Container(
+            width: 70,
+            margin: const EdgeInsets.only(right: 12),
+            decoration: BoxDecoration(
+              color: isSelected 
+                  ? const Color(0xFFF5F6FA)
+                  : const Color(0xFF95A5A6).withOpacity(0.2),
+              borderRadius: BorderRadius.circular(16),
+              border: isSelected ? null : Border.all(
+                color: const Color(0xFF95A5A6).withOpacity(0.3),
+                width: 1,
               ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    weekDays[index],
-                    style: TextStyle(
-                      color: isSelected ? const Color(0xFF2C3E50) : Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
+              boxShadow: isSelected ? [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ] : null,
+            ),
+            child: Stack(
+              children: [
+                Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        weekDays[index],
+                        style: TextStyle(
+                          color: isSelected ? const Color(0xFF2C3E50) : Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        dayDate.day.toString(),
+                        style: TextStyle(
+                          color: isSelected ? const Color(0xFF2C3E50) : Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    dayDate.day.toString(),
-                    style: TextStyle(
-                      color: isSelected ? const Color(0xFF2C3E50) : Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                  if (hasTasksForDay) ...[
-                    const SizedBox(height: 4),
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: isSelected ? const Color(0xFF2C3E50) : Colors.white,
-                        shape: BoxShape.circle,
+                ),
+                if (hasTasksForDay)
+                  Positioned(
+                    bottom: 8,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: isSelected ? const Color(0xFF2C3E50) : Colors.white,
+                          shape: BoxShape.circle,
+                        ),
                       ),
                     ),
-                  ],
-                ],
-              ),
+                  ),
+              ],
             ),
-          );
-        },
-      ),
-    );
-  }
-
+          ),
+        );
+      },
+    ),
+  );
+}
   Widget _buildWeeklyView() {
     return AnimatedBuilder(
       animation: _listAnimation,
@@ -495,10 +579,64 @@ class _WeeklyViewState extends State<WeeklyView> with TickerProviderStateMixin {
             physics: const NeverScrollableScrollPhysics(),
             itemCount: tasksForSelectedDay.length,
             itemBuilder: (context, index) {
+              final task = tasksForSelectedDay[index];
               return AnimatedContainer(
                 duration: Duration(milliseconds: 300 + (index * 100)),
                 curve: Curves.easeOutCubic,
-                child: _buildTaskCard(tasksForSelectedDay[index], index),
+                child: Dismissible(
+                  key: Key('task_${task.id}_${DateTime.now().millisecondsSinceEpoch}'),
+                  direction: DismissDirection.endToStart,
+                  background: Container(
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.only(right: 20),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.8),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: const Icon(
+                      Icons.delete_outline,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                  confirmDismiss: (direction) async {
+                    return await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        backgroundColor: const Color(0xFF34495E),
+                        title: const Text(
+                          'Confirmar exclusão',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        content: Text(
+                          'Tem certeza que deseja excluir a tarefa "${task.title}"?',
+                          style: const TextStyle(color: Color(0xFF95A5A6)),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(false),
+                            child: const Text(
+                              'Cancelar',
+                              style: TextStyle(color: Color(0xFF95A5A6)),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(true),
+                            child: const Text(
+                              'Excluir',
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ) ?? false;
+                  },
+                  onDismissed: (direction) async {
+                    await _deleteTask(task);
+                  },
+                  child: _buildTaskCard(task, index),
+                ),
               );
             },
           ),
@@ -552,6 +690,8 @@ class _WeeklyViewState extends State<WeeklyView> with TickerProviderStateMixin {
   }
 
   Widget _buildTaskCard(Task task, int index) {
+    final isCompleted = completedTasks.contains(task.id);
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: Material(
@@ -562,8 +702,13 @@ class _WeeklyViewState extends State<WeeklyView> with TickerProviderStateMixin {
           child: Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: const Color(0xFFF5F6FA), // Fundo claro como na segunda imagem
+              color: isCompleted 
+                  ? const Color(0xFFF5F6FA).withOpacity(0.7)
+                  : const Color(0xFFF5F6FA), // Fundo claro como na segunda imagem
               borderRadius: BorderRadius.circular(24),
+              border: isCompleted 
+                  ? Border.all(color: Colors.green.withOpacity(0.3), width: 1)
+                  : null,
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.1),
@@ -575,15 +720,15 @@ class _WeeklyViewState extends State<WeeklyView> with TickerProviderStateMixin {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildTaskHeader(task),
+                _buildTaskHeader(task, isCompleted),
                 const SizedBox(height: 20),
-                _buildTaskTime(task),
+                _buildTaskTime(task, isCompleted),
                 if (task.description != null && task.description!.isNotEmpty) ...[
                   const SizedBox(height: 16),
-                  _buildTaskDescription(task),
+                  _buildTaskDescription(task, isCompleted),
                 ],
                 const SizedBox(height: 16),
-                _buildTaskFooter(task),
+                _buildTaskFooter(task, isCompleted),
               ],
             ),
           ),
@@ -592,17 +737,44 @@ class _WeeklyViewState extends State<WeeklyView> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildTaskHeader(Task task) {
+  Widget _buildTaskHeader(Task task, bool isCompleted) {
     return Row(
       children: [
+        // Checkbox para marcar como concluída
+        GestureDetector(
+          onTap: () => _toggleTaskCompletion(task.id),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: isCompleted ? Colors.green : Colors.transparent,
+              border: Border.all(
+                color: isCompleted ? Colors.green : const Color(0xFF95A5A6),
+                width: 2,
+              ),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: isCompleted
+                ? const Icon(
+                    Icons.check,
+                    color: Colors.white,
+                    size: 16,
+                  )
+                : null,
+          ),
+        ),
+        const SizedBox(width: 16),
         Expanded(
           child: Text(
             task.title,
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: const Color(0xFF2C3E50), // Texto escuro
-              decoration: task.isCompleted ? TextDecoration.lineThrough : null,
+              color: isCompleted 
+                  ? const Color(0xFF95A5A6)
+                  : const Color(0xFF2C3E50), // Texto escuro
+              decoration: isCompleted ? TextDecoration.lineThrough : null,
             ),
           ),
         ),
@@ -622,9 +794,10 @@ class _WeeklyViewState extends State<WeeklyView> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildTaskTime(Task task) {
+  Widget _buildTaskTime(Task task, bool isCompleted) {
     return Row(
       children: [
+        const SizedBox(width: 40), // Espaçamento para alinhar com o checkbox
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
@@ -640,9 +813,11 @@ class _WeeklyViewState extends State<WeeklyView> with TickerProviderStateMixin {
         const SizedBox(width: 12),
         Text(
           '${task.dueDate.hour.toString().padLeft(2, '0')}:${task.dueDate.minute.toString().padLeft(2, '0')}',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 18,
-            color: Color(0xFF2C3E50),
+            color: isCompleted 
+                ? const Color(0xFF95A5A6)
+                : const Color(0xFF2C3E50),
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -650,61 +825,96 @@ class _WeeklyViewState extends State<WeeklyView> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildTaskDescription(Task task) {
-    return Text(
-      task.description!,
-      style: const TextStyle(
-        fontSize: 16,
-        color: Color(0xFF95A5A6),
-        height: 1.5,
+  Widget _buildTaskDescription(Task task, bool isCompleted) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 40), // Alinha com o checkbox
+      child: Text(
+        task.description!,
+        style: TextStyle(
+          fontSize: 16,
+          color: isCompleted 
+              ? const Color(0xFF95A5A6).withOpacity(0.7)
+              : const Color(0xFF95A5A6),
+          height: 1.5,
+        ),
+        maxLines: 3,
+        overflow: TextOverflow.ellipsis,
       ),
-      maxLines: 3,
-      overflow: TextOverflow.ellipsis,
     );
   }
 
-  Widget _buildTaskFooter(Task task) {
-    return Row(
-      children: [
-        if (task.tag.isNotEmpty) ...[
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFF95A5A6).withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              task.tag,
-              style: const TextStyle(
-                color: Color(0xFF2C3E50),
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+  Widget _buildTaskFooter(Task task, bool isCompleted) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 40), // Alinha com o checkbox
+      child: Row(
+        children: [
+          if (task.tag.isNotEmpty) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: _getTagColor(task.tag).withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _getTagColor(task.tag).withOpacity(0.4),
+                ),
+              ),
+              child: Text(
+                task.tag,
+                style: TextStyle(
+                  color: _getTagColor(task.tag),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-          ),
+          ],
+          const Spacer(),
+          if (isCompleted)
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.check_rounded,
+                color: Colors.green,
+                size: 16,
+              ),
+            ),
         ],
-        const Spacer(),
-        if (task.isCompleted)
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF95A5A6).withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.check_rounded,
-              color: Color(0xFF2C3E50),
-              size: 16,
-            ),
-          ),
-      ],
+      ),
     );
+  }
+
+  Color _getTagColor(String tag) {
+    switch (tag.toLowerCase()) {
+      case 'trabalho':
+        return const Color(0xFF4CAF50);
+      case 'estudo':
+        return const Color(0xFF2196F3);
+      case 'pessoal':
+        return const Color(0xFFFF9800);
+      case 'importante':
+        return const Color(0xFFF44336);
+      case 'urgente':
+        return const Color(0xFFFF6B6B);
+      case 'projeto':
+        return const Color(0xFF45B7D1);
+      case 'sociologia':
+        return const Color(0xFF4ECDC4);
+      case 'scrum':
+        return const Color(0xFF667EEA);
+      case 'protótipo':
+        return const Color(0xFF45B7D1);
+      default:
+        return const Color(0xFF95A5A6);
+    }
   }
 
   String _getCurrentDateString() {
     final now = DateTime.now();
-    final months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
-                   'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    final months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun','Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
     return '${now.day} ${months[now.month - 1]}';
   }
 
