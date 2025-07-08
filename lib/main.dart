@@ -7,10 +7,20 @@ import 'package:dsi_projeto/screens/profile_screen.dart';
 import 'package:dsi_projeto/screens/register_screen.dart';
 import 'package:dsi_projeto/services/collection_service.dart';
 import 'package:flutter/material.dart';
+import 'package:dsi_projeto/screens/pomodoro_screen.dart'; // 🔹 adicione essa linha
+import 'package:dsi_projeto/screens/map_screen.dart'; // 🔹 adicione essa linha
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'package:dsi_projeto/screens/pomodoro_screen.dart'; 
 import 'package:dsi_projeto/screens/map_screen.dart'; 
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  
   runApp(const MainApp());
 }
 
@@ -34,6 +44,6 @@ class MainApp extends StatelessWidget {
           '/profile': (context) => const ProfileScreen(),
           '/map': (context) => const MapScreen(),
         },
-        home: HomeScreen());
+        home: LoginScreen());
   }
 }

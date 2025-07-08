@@ -1,3 +1,4 @@
+import 'package:dsi_projeto/components/colors/appColors.dart';
 import 'package:flutter/material.dart';
 import '../models/collection.dart';
 import '../services/collection_service.dart';
@@ -21,43 +22,54 @@ class _CreateCollectionScreenState extends State<CreateCollectionScreen> {
     super.dispose();
   }
 
-  void _createCollection() {
+  Future<void> _createCollection() async {
     if (_formKey.currentState!.validate()) {
-      final newCollection = Collection(
-        name: _nameController.text,
-      );
+      try {
+        final newCollection = Collection(
+          name: _nameController.text,
+        );
 
-      // Adiciona a coleção ao service
-      widget.collectionService.addCollection(newCollection);
-      
-      // Debug para verificar se foi adicionada
-      print('Coleção criada: ${_nameController.text}');
-      print('Total de coleções: ${widget.collectionService.getAllCollections().length}');
-      
-      // MUDANÇA AQUI: Apenas volta para a tela anterior
-      // O setState() na FlashcardScreen vai atualizar automaticamente
-      Navigator.pop(context, "/flashcards");
-      
-      // Mostra mensagem de sucesso
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Coleção "${_nameController.text}" criada com sucesso!'),
-          backgroundColor: Colors.green,
-        ),
-      );
+        // Adiciona a coleção ao service
+        await widget.collectionService.addCollection(newCollection);
+
+        // Debug para verificar se foi adicionada
+        print('Coleção criada: ${_nameController.text}');
+        final collections = await widget.collectionService.getAllCollections();
+        print('Total de coleções: ${collections.length}');
+
+        // Volta para a tela anterior
+        Navigator.pop(context, "/flashcards");
+
+        // Mostra mensagem de sucesso
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content:
+                Text('Coleção "${_nameController.text}" criada com sucesso!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        // Mostra mensagem de erro
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao criar coleção: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A), // Tema escuro consistente
+      backgroundColor: AppColors.backgroundLogin, // Tema escuro consistente
       appBar: AppBar(
         title: const Text(
           'Criar Nova Coleção',
           style: TextStyle(color: Colors.white),
         ),
-        backgroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: AppColors.backgroundLogin,
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
       ),
@@ -94,7 +106,7 @@ class _CreateCollectionScreenState extends State<CreateCollectionScreen> {
                 child: ElevatedButton(
                   onPressed: _createCollection,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2A5F4F),
+                    backgroundColor: AppColors.blue, // Cor do botão
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(

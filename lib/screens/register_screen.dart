@@ -1,3 +1,5 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/gestures.dart';
 import 'package:dsi_projeto/components/colors/appColors.dart';
 import 'package:dsi_projeto/components/textfield_register.dart';
@@ -15,66 +17,103 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController nomeController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController senhaController = TextEditingController();
+  
+  bool _isLoading = false;
 
-  void registrarConta() {
+  Future<void> registrarConta() async {
+    // Validate form first
     final nome = nomeController.text.trim();
     final email = emailController.text.trim();
     final senha = senhaController.text;
 
     if (nome.isEmpty || email.isEmpty || senha.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            "Preencha todos os campos",
-            style: TextStyle(fontSize: 16),
-          ),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showSnackBar("Preencha todos os campos", Colors.red);
       return;
     }
 
     if (!email.contains("@") || !email.contains(".")) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            "E-mail inválido",
-            style: TextStyle(fontSize: 16),
-          ),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showSnackBar("E-mail inválido", Colors.red);
       return;
     }
 
     if (senha.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            "Senha deve ter pelo menos 6 caracteres",
-            style: TextStyle(fontSize: 16),
-          ),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showSnackBar("Senha deve ter pelo menos 6 caracteres", Colors.red);
       return;
     }
 
-    // Sucesso (mock)
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Create user with Firebase Auth
+      final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: email,
+        password: senha,
+      );
+
+      // Update display name in Auth
+      await credential.user?.updateDisplayName(nome);
+
+      // Create user document in Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(credential.user!.uid)
+          .set({
+        'name': nome,
+        'email': email,
+        'photoURL': null, // Will be added later in edit profile
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Success
+      _showSnackBar("Conta criada com sucesso!", Colors.green);
+
+      // Navigate to login after 2 seconds
+      Future.delayed(Duration(seconds: 2), () {
+        if (mounted) {
+          Navigator.popAndPushNamed(context, "/login");
+        }
+      });
+
+    } on FirebaseAuthException catch (e) {
+      String errorMessage;
+      switch (e.code) {
+        case 'weak-password':
+          errorMessage = 'A senha é muito fraca.';
+          break;
+        case 'email-already-in-use':
+          errorMessage = 'Este e-mail já está em uso.';
+          break;
+        case 'invalid-email':
+          errorMessage = 'E-mail inválido.';
+          break;
+        default:
+          errorMessage = 'Erro ao criar conta: ${e.message}';
+      }
+      _showSnackBar(errorMessage, Colors.red);
+    } catch (e) {
+      _showSnackBar('Erro inesperado: ${e.toString()}', Colors.red);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _showSnackBar(String message, Color backgroundColor) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          "Conta criada com sucesso!",
+          message,
           style: TextStyle(fontSize: 16),
         ),
-        backgroundColor: Colors.green,
+        backgroundColor: backgroundColor,
       ),
     );
-
-    // Redireciona para tela de login após 2 segundos
-    Future.delayed(Duration(seconds: 2), () {
-      Navigator.popAndPushNamed(context, "/login");
-    });
   }
 
   @override
@@ -105,7 +144,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     child: IconButton(
                       icon: Icon(Icons.arrow_back),
                       color: Colors.black,
-                      onPressed: () {
+                      onPressed: _isLoading ? null : () {
                         Navigator.popAndPushNamed(context, "/login");
                       },
                     ),
@@ -161,7 +200,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: registrarConta,
+                      onPressed: _isLoading ? null : registrarConta,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.black,
                         foregroundColor: Colors.white,
@@ -170,10 +209,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           borderRadius: BorderRadius.circular(100),
                         ),
                       ),
-                      child: Text(
-                        "Inscreva-se",
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
+                      child: _isLoading
+                          ? CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            )
+                          : Text(
+                              "Inscreva-se",
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
                     ),
                   ),
                   SizedBox(height: 20),
@@ -181,7 +225,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   // Link para login - CENTRALIZADO
                   Center(
                     child: TextButton(
-                      onPressed: () {
+                      onPressed: _isLoading ? null : () {
                         Navigator.popAndPushNamed(context, "/login");
                       },
                       child: Text(

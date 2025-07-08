@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../models/user.dart';
 import '../services/user_service.dart';
@@ -13,6 +14,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final UserService _userService = UserService();
   UserModel? _user;
+  User? _firebaseUser;
   bool _isLoading = true;
 
   @override
@@ -23,17 +25,236 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadUserData() async {
     try {
-      final user = await _userService.getCurrentUser();
       setState(() {
-        _user = user;
+        _isLoading = true;
+      });
+
+      // Pegar o usuário atual do Firebase Auth
+      _firebaseUser = FirebaseAuth.instance.currentUser;
+
+      if (_firebaseUser != null) {
+        print('UID do usuário: ${_firebaseUser!.uid}');
+        print('Email: ${_firebaseUser!.email}');
+        print('Nome (displayName): ${_firebaseUser!.displayName}');
+
+        // Carregar dados completos do usuário do Firestore
+        _user = await _userService.getUserById(_firebaseUser!.uid);
+
+        // Se não encontrou no Firestore, criar um usuário básico com dados do Auth
+        if (_user == null && _firebaseUser != null) {
+          _user = UserModel(
+            id: _firebaseUser!.uid,
+            name: _firebaseUser!.displayName ?? 'Usuário',
+            email: _firebaseUser!.email ?? '',
+            // Valores padrão para campos que podem não existir
+            createdAt: DateTime.now(),
+            lastLoginAt: DateTime.now(),
+            studyTimeMinutes: 0,
+            completedActivities: 0,
+            completionRate: 0,
+          );
+        }
+
+        // Ouvir mudanças no estado de autenticação
+        FirebaseAuth.instance.authStateChanges().listen((User? user) {
+          if (user != null) {
+            print('Estado de autenticação mudou: ${user.uid}');
+            // Se o usuário mudou, recarregar dados
+            if (_firebaseUser?.uid != user.uid) {
+              _loadUserData();
+            }
+          } else {
+            // Usuário deslogou, redirecionar para login
+            print('Usuário deslogado');
+            // Navigator.of(context).pushReplacementNamed('/login');
+          }
+        });
+      }
+
+      setState(() {
         _isLoading = false;
       });
     } catch (e) {
+      print('Erro ao carregar dados do usuário: $e');
       setState(() {
         _isLoading = false;
       });
-      // Handle error
+      // Mostrar erro para o usuário
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao carregar perfil: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
+  }
+
+  // Método para pegar informações específicas do provedor
+  Map<String, String> _getProviderInfo() {
+    if (_firebaseUser == null) return {};
+
+    Map<String, String> providerInfo = {};
+
+    for (final providerProfile in _firebaseUser!.providerData) {
+      // ID do provedor (google.com, apple.com, password, etc.)
+      final provider = providerProfile.providerId;
+
+      // UID específico do provedor
+      final uid = providerProfile.uid;
+
+      // Nome, email e foto do perfil
+      final name = providerProfile.displayName;
+      final emailAddress = providerProfile.email;
+      final profilePhoto = providerProfile.photoURL;
+
+      providerInfo[provider] = 'Nome: $name, Email: $emailAddress';
+
+      print('Provedor: $provider');
+      print('UID do provedor: $uid');
+      print('Nome: $name');
+      print('Email: $emailAddress');
+      print('Foto: $profilePhoto');
+    }
+
+    return providerInfo;
+  }
+
+  // Build profile image widget with proper handling of base64 and external URLs
+  Widget _buildProfileImage() {
+    // Priority: Firestore user image > Firebase Auth image > default icon
+
+    // First, check if user has a profile image in Firestore
+    if (_user?.profileImageUrl != null) {
+      if (_user!.hasBase64Image) {
+        // Display base64 image from Firestore
+        final imageBytes = _user!.imageBytes;
+        if (imageBytes != null) {
+          return Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              color: const Color(0xFF2C3E50),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white,
+                width: 4,
+              ),
+            ),
+            child: ClipOval(
+              child: Image.memory(
+                imageBytes,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  print('Erro ao carregar imagem base64: $error');
+                  return const Icon(
+                    Icons.person,
+                    size: 60,
+                    color: Colors.white,
+                  );
+                },
+              ),
+            ),
+          );
+        }
+      } else if (_user!.hasExternalImage) {
+        // Display external URL image from Firestore
+        return Container(
+          width: 120,
+          height: 120,
+          decoration: BoxDecoration(
+            color: const Color(0xFF2C3E50),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.white,
+              width: 4,
+            ),
+          ),
+          child: ClipOval(
+            child: Image.network(
+              _user!.profileImageUrl!,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return const Center(
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                print('Erro ao carregar imagem externa: $error');
+                return const Icon(
+                  Icons.person,
+                  size: 60,
+                  color: Colors.white,
+                );
+              },
+            ),
+          ),
+        );
+      }
+    }
+
+    // Fallback to Firebase Auth photo if no Firestore image
+    if (_firebaseUser?.photoURL != null) {
+      return Container(
+        width: 120,
+        height: 120,
+        decoration: BoxDecoration(
+          color: const Color(0xFF2C3E50),
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: Colors.white,
+            width: 4,
+          ),
+        ),
+        child: ClipOval(
+          child: Image.network(
+            _firebaseUser!.photoURL!,
+            fit: BoxFit.cover,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return const Center(
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              );
+            },
+            errorBuilder: (context, error, stackTrace) {
+              print('Erro ao carregar foto do Firebase Auth: $error');
+              return const Icon(
+                Icons.person,
+                size: 60,
+                color: Colors.white,
+              );
+            },
+          ),
+        ),
+      );
+    }
+
+    // Default avatar if no image is available
+    return Container(
+      width: 120,
+      height: 120,
+      decoration: BoxDecoration(
+        color: const Color(0xFF2C3E50),
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: Colors.white,
+          width: 4,
+        ),
+      ),
+      child: const Icon(
+        Icons.person,
+        size: 60,
+        color: Colors.white,
+      ),
+    );
   }
 
   @override
@@ -52,7 +273,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         child: SafeArea(
           child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? const Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
               : _buildProfileContent(),
         ),
       ),
@@ -60,6 +285,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildProfileContent() {
+    // Se não há usuário logado
+    if (_firebaseUser == null) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.person_off,
+              size: 64,
+              color: Colors.white,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Nenhum usuário logado',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Column(
       children: [
         // Header with edit button
@@ -113,20 +362,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 const SizedBox(height: 40),
 
-                // Profile Avatar
-                Container(
-                  width: 120,
-                  height: 120,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF2C3E50),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.person,
-                    size: 60,
-                    color: Colors.white,
-                  ),
-                ),
+                // Profile Avatar - Updated to use the new method
+                _buildProfileImage(),
 
                 const SizedBox(height: 24),
 
@@ -142,13 +379,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                 const SizedBox(height: 8),
 
-                // User name
+                // User name - prioriza dados do Firestore, depois Firebase Auth
                 Text(
-                  _user?.name ?? '<nome>',
+                  _user?.name ?? _firebaseUser?.displayName ?? 'Usuário',
                   style: const TextStyle(
                     fontSize: 18,
                     color: Color(0xFF7F8C8D),
                     fontWeight: FontWeight.w500,
+                  ),
+                ),
+
+                // Email do usuário
+                const SizedBox(height: 4),
+                Text(
+                  _firebaseUser?.email ?? 'Email não disponível',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF95A5A6),
                   ),
                 ),
 
@@ -187,7 +434,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              _user?.getFormattedStudyTime() ?? '70h23min',
+                              _user?.getFormattedStudyTime() ?? '0h00min',
                               style: const TextStyle(
                                 fontSize: 28,
                                 fontWeight: FontWeight.bold,
@@ -232,7 +479,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    '${_user?.completedActivities ?? 55}',
+                                    '${_user?.completedActivities ?? 0}',
                                     style: const TextStyle(
                                       fontSize: 24,
                                       fontWeight: FontWeight.bold,
@@ -275,7 +522,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    '${_user?.completionRate ?? 20}%',
+                                    '${_user?.completionRate ?? 0}%',
                                     style: const TextStyle(
                                       fontSize: 24,
                                       fontWeight: FontWeight.bold,

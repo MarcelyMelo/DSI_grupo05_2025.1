@@ -3,6 +3,8 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../models/user.dart';
 import '../services/user_service.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:typed_data';
 
 class EditProfileScreen extends StatefulWidget {
   final UserModel user;
@@ -24,6 +26,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   bool _isLoading = false;
   File? _selectedImage;
+  Uint8List? _webImageBytes;
+  String? _webImageName;
+  bool _shouldRemoveImage =
+      false; // Flag to track if user wants to remove image
   final ImagePicker _imagePicker = ImagePicker();
 
   @override
@@ -40,6 +46,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
+  // Helper method to check if user has selected a new image
+  bool _hasSelectedImage() {
+    return (kIsWeb && _webImageBytes != null) ||
+        (!kIsWeb && _selectedImage != null);
+  }
+
+  // Helper method to check if there's any image to display (selected or existing)
+  bool _hasAnyImage() {
+    return _hasSelectedImage() ||
+        (!_shouldRemoveImage && widget.user.profileImageUrl != null);
+  }
+
   Future<void> _pickImage() async {
     try {
       final XFile? image = await _imagePicker.pickImage(
@@ -50,13 +68,245 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       );
 
       if (image != null) {
-        setState(() {
-          _selectedImage = File(image.path);
-        });
+        if (kIsWeb) {
+          final bytes = await image.readAsBytes();
+          setState(() {
+            _webImageBytes = bytes;
+            _webImageName = image.name;
+            _selectedImage = null;
+            _shouldRemoveImage = false;
+          });
+        } else {
+          setState(() {
+            _selectedImage = File(image.path);
+            _webImageBytes = null;
+            _webImageName = null;
+            _shouldRemoveImage = false;
+          });
+        }
       }
     } catch (e) {
       _showErrorSnackBar('Erro ao selecionar imagem: $e');
     }
+  }
+
+  Future<void> _takePhoto() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 70,
+        maxWidth: 500,
+        maxHeight: 500,
+      );
+
+      if (image != null) {
+        if (kIsWeb) {
+          final bytes = await image.readAsBytes();
+          setState(() {
+            _webImageBytes = bytes;
+            _webImageName = image.name;
+            _selectedImage = null;
+            _shouldRemoveImage = false;
+          });
+        } else {
+          setState(() {
+            _selectedImage = File(image.path);
+            _webImageBytes = null;
+            _webImageName = null;
+            _shouldRemoveImage = false;
+          });
+        }
+      }
+    } catch (e) {
+      _showErrorSnackBar('Erro ao tirar foto: $e');
+    }
+  }
+
+  void _removeImage() {
+    setState(() {
+      _selectedImage = null;
+      _webImageBytes = null;
+      _webImageName = null;
+      _shouldRemoveImage = true;
+    });
+  }
+
+  void _showImagePickerOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Galeria'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickImage();
+                },
+              ),
+              if (!kIsWeb)
+                ListTile(
+                  leading: const Icon(Icons.photo_camera),
+                  title: const Text('Câmera'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _takePhoto();
+                  },
+                ),
+              if (_hasAnyImage())
+                ListTile(
+                  leading: const Icon(Icons.delete),
+                  title: const Text('Remover foto'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _removeImage();
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildProfileImage() {
+    return GestureDetector(
+      onTap: _showImagePickerOptions,
+      child: Stack(
+        children: [
+          Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0xFF2C3E50),
+              border: Border.all(
+                color: Colors.white,
+                width: 4,
+              ),
+            ),
+            child: _buildImageWidget(),
+          ),
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: const Color(0xFF2C3E50),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white,
+                  width: 2,
+                ),
+              ),
+              child: const Icon(
+                Icons.camera_alt,
+                color: Colors.white,
+                size: 18,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildImageWidget() {
+    // If user wants to remove image, show default icon
+    if (_shouldRemoveImage) {
+      return const Icon(
+        Icons.person,
+        size: 60,
+        color: Colors.white,
+      );
+    }
+
+    // Priority: selected image > existing profile image > default icon
+    if (kIsWeb && _webImageBytes != null) {
+      return ClipOval(
+        child: Image.memory(
+          _webImageBytes!,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return const Icon(
+              Icons.person,
+              size: 60,
+              color: Colors.white,
+            );
+          },
+        ),
+      );
+    } else if (!kIsWeb && _selectedImage != null) {
+      return ClipOval(
+        child: Image.file(
+          _selectedImage!,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return const Icon(
+              Icons.person,
+              size: 60,
+              color: Colors.white,
+            );
+          },
+        ),
+      );
+    } else if (widget.user.profileImageUrl != null) {
+      // Handle both base64 and external URLs
+      if (widget.user.hasBase64Image) {
+        // Display base64 image
+        final imageBytes = widget.user.imageBytes;
+        if (imageBytes != null) {
+          return ClipOval(
+            child: Image.memory(
+              imageBytes,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return const Icon(
+                  Icons.person,
+                  size: 60,
+                  color: Colors.white,
+                );
+              },
+            ),
+          );
+        }
+      } else if (widget.user.hasExternalImage) {
+        // Display external URL image
+        return ClipOval(
+          child: Image.network(
+            widget.user.profileImageUrl!,
+            fit: BoxFit.cover,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return const Center(
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              );
+            },
+            errorBuilder: (context, error, stackTrace) {
+              return const Icon(
+                Icons.person,
+                size: 60,
+                color: Colors.white,
+              );
+            },
+          ),
+        );
+      }
+    }
+
+    // Default icon
+    return const Icon(
+      Icons.person,
+      size: 60,
+      color: Colors.white,
+    );
   }
 
   Future<void> _saveProfile() async {
@@ -69,20 +319,37 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     });
 
     try {
+      final name = _nameController.text.trim();
+      final email = _emailController.text.trim();
+
+      if (name.isEmpty) {
+        throw Exception('Nome é obrigatório');
+      }
+
+      if (email.isEmpty) {
+        throw Exception('Email é obrigatório');
+      }
+
+      // Update user profile in Firebase
       await _userService.updateUserProfile(
         userId: widget.user.id,
-        name: _nameController.text.trim(),
-        email: _emailController.text.trim(),
-        profileImageUrl:
-            _selectedImage?.path, // In real app, upload to server first
+        name: name,
+        email: email,
+        profileImageFile: !kIsWeb ? _selectedImage : null,
+        webImageBytes: kIsWeb ? _webImageBytes : null,
+        webImageName: kIsWeb ? _webImageName : null,
+        removeImage: _shouldRemoveImage,
       );
 
       if (mounted) {
         _showSuccessSnackBar('Perfil atualizado com sucesso!');
-        Navigator.of(context).pop(true); // Return true to indicate success
+        await Future.delayed(const Duration(milliseconds: 500));
+        Navigator.of(context).pop(true);
       }
     } catch (e) {
-      _showErrorSnackBar('Erro ao atualizar perfil: $e');
+      print('Erro ao salvar perfil: $e');
+      _showErrorSnackBar(
+          'Erro ao atualizar perfil: ${e.toString().replaceAll('Exception: ', '')}');
     } finally {
       if (mounted) {
         setState(() {
@@ -93,65 +360,45 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   void _showSuccessSnackBar(String message) {
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.green[600],
         behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
       ),
     );
   }
 
   void _showErrorSnackBar(String message) {
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  Widget _buildProfileImage() {
-    return GestureDetector(
-      onTap: _pickImage,
-      child: Container(
-        width: 120,
-        height: 120,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: const Color(0xFF2C3E50),
-          border: Border.all(
-            color: Colors.white,
-            width: 4,
-          ),
+        content: Row(
+          children: [
+            const Icon(Icons.error, color: Colors.white),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
         ),
-        child: _selectedImage != null
-            ? ClipOval(
-                child: Image.file(
-                  _selectedImage!,
-                  fit: BoxFit.cover,
-                ),
-              )
-            : widget.user.profileImageUrl != null
-                ? ClipOval(
-                    child: Image.network(
-                      widget.user.profileImageUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Icon(
-                          Icons.person,
-                          size: 60,
-                          color: Colors.white,
-                        );
-                      },
-                    ),
-                  )
-                : const Icon(
-                    Icons.person,
-                    size: 60,
-                    color: Colors.white,
-                  ),
+        backgroundColor: Colors.red[600],
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
       ),
     );
   }
@@ -179,7 +426,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 child: Row(
                   children: [
                     IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed:
+                          _isLoading ? null : () => Navigator.of(context).pop(),
                       icon: const Icon(
                         Icons.arrow_back,
                         color: Colors.white,
@@ -196,7 +444,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 40), // Balance the back button
+                    const SizedBox(width: 40),
                   ],
                 ),
               ),
@@ -225,7 +473,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               _buildProfileImage(),
                               const SizedBox(height: 12),
                               TextButton.icon(
-                                onPressed: _pickImage,
+                                onPressed:
+                                    _isLoading ? null : _showImagePickerOptions,
                                 icon: const Icon(Icons.camera_alt),
                                 label: const Text('Alterar Foto'),
                                 style: TextButton.styleFrom(
@@ -252,6 +501,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             ),
                             child: TextFormField(
                               controller: _nameController,
+                              enabled: !_isLoading,
                               decoration: const InputDecoration(
                                 labelText: 'Nome',
                                 prefixIcon: Icon(Icons.person_outline),
@@ -287,6 +537,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             ),
                             child: TextFormField(
                               controller: _emailController,
+                              enabled: !_isLoading,
                               keyboardType: TextInputType.emailAddress,
                               decoration: const InputDecoration(
                                 labelText: 'Email',

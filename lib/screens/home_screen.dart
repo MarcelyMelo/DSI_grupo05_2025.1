@@ -2,9 +2,10 @@ import 'package:dsi_projeto/screens/flashcard_screen.dart';
 import 'package:dsi_projeto/screens/map_screen.dart';
 import 'package:dsi_projeto/screens/profile_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:dsi_projeto/components/custom_bottom_navbar.dart';
-import 'package:dsi_projeto/components/colors/appColors.dart';
+import 'package:dsi_projeto/components/custom_bottom_navbar.dart'; // Importação correta
+import 'package:dsi_projeto/components/colors/appColors.dart'; // Importação das cores
 import 'package:dsi_projeto/screens/pomodoro_screen.dart';
+import 'package:dsi_projeto/features/schedule/schedule_page.dart';
 import 'package:dsi_projeto/features/schedule/schedule_controller.dart';
 import 'package:dsi_projeto/features/schedule/models/task_model.dart';
 import 'package:dsi_projeto/features/schedule/pages/edit_task_page.dart';
@@ -28,7 +29,7 @@ class MainNavigationScreen extends StatefulWidget {
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
-  int _selectedIndex = 0; // Mudei para 0 para começar na primeira tela
+  int _selectedIndex = 0;
 
   // Instância singleton do controller
   static final ScheduleController _controller = ScheduleController.instance;
@@ -40,7 +41,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     MapScreen(),
     PomodoroScreen(),
     FlashcardScreen(),
-    ProfileScreen(),
+    ProfileScreen()
   ];
 
   void _onItemTapped(int index) {
@@ -551,7 +552,8 @@ class SchedulePage extends StatefulWidget {
   State<SchedulePage> createState() => _SchedulePageState();
 }
 
-class _SchedulePageState extends State<SchedulePage> with SingleTickerProviderStateMixin {
+class _SchedulePageState extends State<SchedulePage>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   ScheduleController get _controller => widget.controller;

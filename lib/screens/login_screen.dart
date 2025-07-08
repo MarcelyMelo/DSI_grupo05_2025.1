@@ -2,6 +2,7 @@ import 'package:dsi_projeto/components/colors/appColors.dart';
 import 'package:dsi_projeto/components/icons/icon_login.dart';
 import 'package:dsi_projeto/components/signin_button.dart';
 import 'package:dsi_projeto/components/textfield_login.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -16,26 +17,44 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController senhaController = TextEditingController();
   String? errorMessage;
 
-  void fazerLogin() {
+  Future<void> fazerLogin() async {
     String email = emailController.text.trim();
     String senha = senhaController.text;
-
-    // Mock simples: e-mail e senha fixos
-    if (email == "teste@email.com" && senha == "123456") {
-      Navigator.popAndPushNamed(context, "/home");
-    } else {
-      setState(() {
-        errorMessage = "E-mail ou senha incorretos";
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            errorMessage!,
-            style: TextStyle(fontSize: 16),
-          ),
-          backgroundColor: Colors.red,
-        ),
+    try {
+      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: senhaController.text
       );
+      Navigator.popAndPushNamed(context, "/home");
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found') {
+        setState(() {
+        errorMessage = "Nenhum usuário encontrado para esse e-mail";
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              errorMessage!,
+              style: TextStyle(fontSize: 16),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } else if (e.code == 'wrong-password') 
+      {
+        setState(() {
+        errorMessage = "Senha incorreta";
+      });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              errorMessage!,
+              style: TextStyle(fontSize: 16),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
