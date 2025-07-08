@@ -32,7 +32,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
 
   // Instância singleton do controller
-  static final ScheduleController _controller = ScheduleController.instance;
+  static final ScheduleController _controller = ScheduleController();
 
   // Passa o controller para as páginas que precisam
   late final List<Widget> _pages = <Widget>[
@@ -120,7 +120,7 @@ class _TaskListPageState extends State<TaskListPage> with TickerProviderStateMix
 
   void _deleteTask(Task task) {
   // CORREÇÃO: Use o método deleteTask que foi adicionado no controller
-  _controller.deleteTask(task);
+ _controller.deleteTask(task.id);
   setState(() {
     completedTasks.remove(task.id);
   });
