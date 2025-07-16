@@ -70,90 +70,176 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Color(0xFF1A2332), // Cor de fundo escura consistente
       body: SafeArea(
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                AppColors.green,
-                AppColors.white,
+        child: SingleChildScrollView(
+          child: Container(
+            height: MediaQuery.of(context).size.height - MediaQuery.of(context).padding.top,
+            child: Column(
+              children: [
+                // Header com botão de voltar
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  child: Row(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Color(0xFF2A3441).withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.arrow_back,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                          onPressed: () {
+                            Navigator.popAndPushNamed(context, "/login");
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Espaço flexível para centralizar conteúdo
+                Expanded(
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 32),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Título principal
+                        Text(
+                          'Esqueceu sua senha?',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            height: 1.2,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        
+                        SizedBox(height: 12),
+                        
+                        // Subtítulo
+                        Text(
+                          'Para redefinir sua senha, por favor, insira seu endereço de e-mail.',
+                          style: TextStyle(
+                            color: Color(0xFF8B9AAF),
+                            fontSize: 16,
+                            height: 1.5,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        
+                        SizedBox(height: 48),
+                        
+                        // Campo de e-mail customizado
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Color(0xFF2A3441).withOpacity(0.8),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Color(0xFF3A4753).withOpacity(0.5),
+                              width: 1,
+                            ),
+                          ),
+                          child: TextField(
+                            controller: emailController,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: "Seu e-mail",
+                              hintStyle: TextStyle(
+                                color: Color(0xFF8B9AAF),
+                                fontSize: 16,
+                              ),
+                              prefixIcon: Container(
+                                padding: EdgeInsets.all(12),
+                                child: Icon(
+                                  Icons.email_outlined,
+                                  color: Color(0xFF8B9AAF),
+                                  size: 20,
+                                ),
+                              ),
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 20,
+                              ),
+                            ),
+                          ),
+                        ),
+                        
+                        SizedBox(height: 32),
+                        
+                        // Botão de enviar
+                        Container(
+                          height: 56,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Color(0xFF00D4AA),
+                                Color(0xFF00B794),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Color(0xFF00D4AA).withOpacity(0.3),
+                                blurRadius: 20,
+                                offset: Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: TextButton(
+                            onPressed: enviarEmailRecuperacao,
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            child: Text(
+                              "Enviar",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                        
+                        SizedBox(height: 24),
+                        
+                        // Link para voltar ao login
+                        TextButton(
+                          onPressed: () {
+                            Navigator.popAndPushNamed(context, "/login");
+                          },
+                          child: Text(
+                            "Já tem uma conta? Entrar",
+                            style: TextStyle(
+                              color: Color(0xFF8B9AAF),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
             ),
-          ),
-          child: Column(
-            children: [
-              SizedBox(height: 150),
-              Padding(
-                padding: EdgeInsets.only(left: 20),
-                child: Align(
-                  alignment: Alignment.topLeft,
-                  child: IconButton(
-                    icon: Icon(Icons.arrow_back),
-                    color: Colors.black,
-                    onPressed: () {
-                      Navigator.popAndPushNamed(context, "/login");
-                    },
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 25), // Adiciona margem nas laterais
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Esqueceu sua senha?',
-                      style: TextStyle(color: Colors.white, fontSize: 24),
-                    ),
-                    SizedBox(height: 10),
-                    Text(
-                      'Para redefinir sua senha, por favor, insira seu endereço de e-mail.',
-                      style: TextStyle(color: Colors.white, fontSize: 16),
-                      softWrap: true, // Garante quebra de linha
-                      textAlign: TextAlign
-                          .left, // Alinhamento esquerdo (mais natural para textos longos)
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: MyTextField(
-                  controller: emailController,
-                  hintText: "E-mail",
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-                child: Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: AppColors.blue,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: TextButton(
-                    onPressed: enviarEmailRecuperacao,
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.white,
-                    ),
-                    child: Text("Enviar"),
-                  ),
-                ),
-              ),
-              SizedBox(height: 20),
-              TextButton(
-                onPressed: () {
-                  Navigator.popAndPushNamed(context, "/login");
-                },
-                child: Text(
-                  "Ir para o login",
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-            ],
           ),
         ),
       ),
