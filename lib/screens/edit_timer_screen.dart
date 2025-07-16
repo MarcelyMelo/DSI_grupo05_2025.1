@@ -124,70 +124,200 @@ class _EditTimerScreenState extends State<EditTimerScreen> {
     return true;
   }
 
+  Widget _buildStyledTextField({
+    required TextEditingController controller,
+    required String hintText,
+    required IconData icon,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Color(0xFF2A4B52),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: TextField(
+        controller: controller,
+        style: TextStyle(color: Colors.white),
+        keyboardType: keyboardType,
+        inputFormatters: inputFormatters,
+        decoration: InputDecoration(
+          hintText: hintText,
+          hintStyle: TextStyle(color: Colors.white60),
+          prefixIcon: Icon(icon, color: Colors.white60),
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Text(
+        title,
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStyledSwitch() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Color(0xFF2A4B52),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: SwitchListTile(
+        title: Text(
+          'Modo Pomodoro',
+          style: TextStyle(color: Colors.white, fontSize: 16),
+        ),
+        value: _isPomodoro,
+        onChanged: (value) => setState(() => _isPomodoro = value),
+        activeColor: Color(0xFF00C896),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Color(0xFF1E3A3F),
       appBar: AppBar(
-        backgroundColor: AppColors.blue,
-        title: const Text('Editar Cronômetro', style: TextStyle(color: Colors.white)),
+        backgroundColor: Color(0xFF1E3A3F),
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'Editar Cronômetro',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.save, color: Colors.white),
+            icon: Icon(Icons.save, color: Color(0xFF00C896)),
             onPressed: _saveChanges,
           ),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(24),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextField(
+            _buildSectionTitle('Nome do Cronômetro'),
+            _buildStyledTextField(
               controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Nome do Cronômetro',
-                border: OutlineInputBorder(),
-              ),
+              hintText: 'Digite o nome do cronômetro',
+              icon: Icons.timer,
             ),
-            const SizedBox(height: 20),
-            SwitchListTile(
-              title: const Text('Modo Pomodoro'),
-              value: _isPomodoro,
-              onChanged: (value) => setState(() => _isPomodoro = value),
-            ),
+            
+            const SizedBox(height: 24),
+            
+            _buildStyledSwitch(),
+            
+            const SizedBox(height: 24),
+            
             if (_isPomodoro) ...[
-              const SizedBox(height: 20),
-              const Text('Tempo de Foco:', style: TextStyle(fontSize: 16)),
-              MinuteSecondInput(
-                minutesController: _studyMinutesController,
-                secondsController: _studySecondsController,
+              _buildSectionTitle('Tempo de Foco'),
+              Container(
+                decoration: BoxDecoration(
+                  color: Color(0xFF2A4B52),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: EdgeInsets.all(16),
+                child: MinuteSecondInput(
+                  minutesController: _studyMinutesController,
+                  secondsController: _studySecondsController,
+                ),
               ),
+              
               const SizedBox(height: 20),
-              const Text('Tempo de Descanso:', style: TextStyle(fontSize: 16)),
-              MinuteSecondInput(
-                minutesController: _breakMinutesController,
-                secondsController: _breakSecondsController,
+              
+              _buildSectionTitle('Tempo de Descanso'),
+              Container(
+                decoration: BoxDecoration(
+                  color: Color(0xFF2A4B52),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: EdgeInsets.all(16),
+                child: MinuteSecondInput(
+                  minutesController: _breakMinutesController,
+                  secondsController: _breakSecondsController,
+                ),
               ),
+              
               const SizedBox(height: 20),
-              TextField(
+              
+              _buildSectionTitle('Quantidade de Intervalos'),
+              _buildStyledTextField(
                 controller: _intervalsController,
+                hintText: 'Número de intervalos',
+                icon: Icons.repeat,
                 keyboardType: TextInputType.number,
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
                   LengthLimitingTextInputFormatter(2),
                 ],
-                decoration: const InputDecoration(
-                  labelText: 'Quantidade de Intervalos',
-                  border: OutlineInputBorder(),
-                ),
               ),
             ] else ...[
-              const SizedBox(height: 20),
-              const Text('Duração Total:', style: TextStyle(fontSize: 16)),
-              MinuteSecondInput(
-                minutesController: _minutesController,
-                secondsController: _secondsController,
+              _buildSectionTitle('Duração Total'),
+              Container(
+                decoration: BoxDecoration(
+                  color: Color(0xFF2A4B52),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: EdgeInsets.all(16),
+                child: MinuteSecondInput(
+                  minutesController: _minutesController,
+                  secondsController: _secondsController,
+                ),
               ),
             ],
+            
+            const SizedBox(height: 32),
+            
+            // Botão de Salvar
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _saveChanges,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF00C896),
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.save, size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'Salvar Alterações',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
